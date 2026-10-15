@@ -6,23 +6,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const filterPage = document.getElementById("filterPage");
 
     if (filterForm && messageSearch && messageStatus) {
-        let searchTimer = null;
-
         messageSearch.addEventListener("input", function () {
-            clearTimeout(searchTimer);
-
-            searchTimer = setTimeout(function () {
-                if (filterPage) {
-                    filterPage.value = "1";
-                }
-
-                filterForm.requestSubmit();
-            }, 250);
+            if (filterPage) {
+                filterPage.value = "1";
+            }
         });
 
         messageStatus.addEventListener("change", function () {
-            clearTimeout(searchTimer);
-
             if (filterPage) {
                 filterPage.value = "1";
             }
@@ -44,7 +34,9 @@ document.addEventListener("DOMContentLoaded", function () {
             templateOptions.querySelectorAll(".template-option[data-id]")
         );
 
-        let emptyMessage = templateOptions.querySelector(".template-empty-message");
+        let emptyMessage = templateOptions.querySelector(
+            ".template-empty-message"
+        );
 
         if (!emptyMessage) {
             emptyMessage = document.createElement("div");
@@ -133,9 +125,11 @@ document.addEventListener("DOMContentLoaded", function () {
         bulkForm.addEventListener("submit", function (event) {
             if (!templateId.value) {
                 event.preventDefault();
+
                 templateSearch.setCustomValidity(
                     "Please select a template from the dropdown."
                 );
+
                 templateSearch.reportValidity();
                 templateSearch.setCustomValidity("");
                 openDropdown();
@@ -167,9 +161,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    const recipientFile = document.getElementById("recipientFile");
-    const headerImage = document.getElementById("headerImage");
-
     function updateFileName(input, displayId, defaultText) {
         const display = document.getElementById(displayId);
 
@@ -182,6 +173,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 ? input.files[0].name
                 : defaultText;
     }
+
+    const recipientFile = document.getElementById("recipientFile");
+    const headerImage = document.getElementById("headerImage");
 
     if (recipientFile) {
         recipientFile.addEventListener("change", function () {
@@ -204,7 +198,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     document.querySelectorAll("[data-clear]").forEach(function (button) {
-        button.addEventListener("click", function () {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
             const inputId = button.dataset.clear;
             const displayId = button.dataset.display;
             const input = document.getElementById(inputId);
@@ -229,75 +226,83 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    document.querySelectorAll("[data-file-picker]").forEach(function (row) {
+        const inputId = row.dataset.filePicker;
+        const fileInput = document.getElementById(inputId);
 
-    document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll("[data-file-picker]").forEach(function (row) {
-            const inputId = row.dataset.filePicker;
-            const fileInput = document.getElementById(inputId);
+        if (!fileInput) {
+            return;
+        }
 
-            if (!fileInput) return;
+        row.addEventListener("click", function (event) {
+            if (event.target.closest("[data-clear]")) {
+                return;
+            }
 
-            row.addEventListener("click", function (event) {
-                if (event.target.closest("[data-clear]")) return;
-                if (event.target === fileInput) return;
-
+            if (event.target !== fileInput) {
                 fileInput.click();
-            });
-
-            row.addEventListener("keydown", function (event) {
-                if (event.target.closest("[data-clear]")) return;
-
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    fileInput.click();
-                }
-            });
+            }
         });
 
-        document.querySelectorAll("[data-clear]").forEach(function (button) {
-            button.addEventListener("click", function (event) {
+        row.addEventListener("keydown", function (event) {
+            if (event.target.closest("[data-clear]")) {
+                return;
+            }
+
+            if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                event.stopPropagation();
-
-                const inputId = button.dataset.clear;
-                const displayId = button.dataset.display;
-                const fileInput = document.getElementById(inputId);
-                const display = document.getElementById(displayId);
-
-                if (fileInput) {
-                    fileInput.value = "";
-                }
-
-                if (display) {
-                    display.textContent = inputId === "recipientFile"
-                        ? "No recipient file selected"
-                        : "No header image selected";
-                }
-            });
+                fileInput.click();
+            }
         });
-
-        const recipientFile = document.getElementById("recipientFile");
-        const recipientName = document.getElementById("recipientName");
-        const headerImage = document.getElementById("headerImage");
-        const headerImageName = document.getElementById("headerImageName");
-
-        if (recipientFile && recipientName) {
-            recipientFile.addEventListener("change", function () {
-                recipientName.textContent = this.files.length
-                    ? this.files[0].name
-                    : "No recipient file selected";
-            });
-        }
-
-        if (headerImage && headerImageName) {
-            headerImage.addEventListener("change", function () {
-                headerImageName.textContent = this.files.length
-                    ? this.files[0].name
-                    : "No header image selected";
-            });
-        }
     });
 
 
+    document.addEventListener("DOMContentLoaded", function () {
+        const search = document.getElementById("waMessageSearch");
+        const chatBody = document.getElementById("waChatBody");
+        const refreshButton = document.getElementById("waRefreshButton");
+        const visibleCount = document.getElementById("waVisibleCount");
+        const noResults = document.getElementById("waNoSearchResults");
+
+        if (!chatBody) return;
+
+        const messageItems = Array.from(
+            chatBody.querySelectorAll(".wa-message-item")
+        );
+
+        function filterMessages() {
+            const term = (search?.value || "").trim().toLowerCase();
+            let visible = 0;
+
+            messageItems.forEach(function (item) {
+                const text = item.innerText.toLowerCase();
+                const match = !term || text.includes(term);
+
+                item.hidden = !match;
+
+                if (match) visible++;
+            });
+
+            if (visibleCount) {
+                visibleCount.textContent = visible + " messages";
+            }
+
+            if (noResults) {
+                noResults.hidden = visible !== 0 || messageItems.length === 0;
+            }
+        }
+
+        if (search) {
+            search.addEventListener("input", filterMessages);
+        }
+
+        if (refreshButton) {
+            refreshButton.addEventListener("click", function () {
+                window.location.reload();
+            });
+        }
+
+        chatBody.scrollTop = chatBody.scrollHeight;
+    });
 
 });

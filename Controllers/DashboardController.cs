@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using WhatsAppManagerMvc.Models;
 using WhatsAppManagerMvc.Services;
+using System.Text.Json;
 
 namespace WhatsAppManagerMvc.Controllers;
 
@@ -37,12 +38,7 @@ public class DashboardController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> MessageHistory(
-        string? search,
-        string? status,
-        int page = 1,
-        int pageSize = 10,
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> MessageHistory(string? search, string? status, int page = 1, int pageSize = 10, bool ajax = false, CancellationToken cancellationToken = default)
     {
         page = Math.Max(1, page);
 
@@ -59,6 +55,17 @@ public class DashboardController : Controller
 
         try
         {
+            var templates = await _api.GetTemplatesAsync(
+                cancellationToken);
+
+            ViewBag.TemplateNames = templates
+                .Where(t => t.Id > 0 &&
+                            !string.IsNullOrWhiteSpace(t.TemplateName))
+                .GroupBy(t => t.Id)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.First().TemplateName);
+
             var messages = await _api.GetMessagesAsync(
                 cancellationToken);
 
@@ -98,15 +105,22 @@ public class DashboardController : Controller
         catch (Exception ex)
         {
             model.Error = ex.Message;
+
+            ViewBag.TemplateNames ??= new Dictionary<int, string>();
         }
 
         model.Notice = TempData["Notice"] as string;
         model.Error ??= TempData["Error"] as string;
 
+        if (ajax)
+        {
+            return PartialView("_MessageHistoryResults", model);
+        }
+
         return View(model);
     }
 
-    [HttpPost]
+        [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(52428800)]
     public async Task<IActionResult> SendBulk(
@@ -166,7 +180,57 @@ public class DashboardController : Controller
                 headerImage,
                 cancellationToken);
 
-            TempData["Notice"] = result;
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                TempData["Notice"] = "Message sent successfully!";
+            }
+            else
+            {
+                using var document = JsonDocument.Parse(result);
+                var root = document.RootElement;
+
+                if (root.TryGetProperty(
+                    "sentMessages", out var sentMessages) &&
+                    sentMessages.ValueKind == JsonValueKind.Array)
+                {
+                    var sentCount = sentMessages.EnumerateArray()
+                        .Count(message =>
+                            message.TryGetProperty(
+                                "status", out var statusElement) &&
+                            string.Equals(
+                                statusElement.GetString(),
+                                "Sent",
+                                StringComparison.OrdinalIgnoreCase));
+
+                    var totalRecipients = root.TryGetProperty(
+                        "totalRecipients", out var totalElement)
+                        ? totalElement.GetInt32()
+                        : sentMessages.GetArrayLength();
+
+                    if (sentCount > 0 && sentCount == totalRecipients)
+                    {
+                        TempData["Notice"] = "Message sent successfully!";
+                    }
+                    else if (sentCount > 0)
+                    {
+                        TempData["Notice"] =
+                            $"Messages sent: {sentCount} of {totalRecipients}.";
+                    }
+                    else
+                    {
+                        TempData["Error"] =
+                            "Message could not be sent. Please check the message history.";
+                    }
+                }
+                else
+                {
+                    TempData["Notice"] = "Message sent successfully!";
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            TempData["Notice"] = "Message sent successfully!";
         }
         catch (Exception ex)
         {
@@ -200,4 +264,50 @@ public class DashboardController : Controller
             return View(new List<WhatsAppMessage>());
         }
     }
+
+
+
+
+    [HttpGet]
+    public async Task<IActionResult> WhatsAppChat(
+        string? phoneNumber,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return BadRequest("Phone number is required.");
+        }
+
+        ViewBag.PhoneNumber = phoneNumber;
+
+        try
+        {
+            var messages = await _api.GetMessagesByPhoneAsync(
+                phoneNumber,
+                cancellationToken);
+
+            var templates = await _api.GetTemplatesAsync(
+                cancellationToken);
+
+            ViewBag.TemplateDetails = templates;
+
+            var orderedMessages = messages
+                .OrderBy(m => m.CreatedAt ?? m.SentAt)
+                .ToList();
+
+            return View(orderedMessages);
+        }
+        catch (Exception ex)
+        {
+            ViewBag.Error = ex.Message;
+            ViewBag.TemplateDetails = new List<object>();
+
+            return View(new List<WhatsAppMessage>());
+        }
+    }
+
+
+
+
+
 }

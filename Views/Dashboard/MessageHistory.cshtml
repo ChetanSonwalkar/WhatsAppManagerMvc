@@ -76,6 +76,7 @@
                 class="form-control"
                 name="status"
                 aria-label="Filter by status">
+
             @foreach (var item in statuses)
             {
                 if (string.Equals(
@@ -126,6 +127,7 @@
                     <th>Template Name</th>
                     <th>Status</th>
                     <th>Sent At</th>
+                    <th>Action</th>
                 </tr>
             </thead>
 
@@ -144,21 +146,25 @@
                     {
                         var state = string.IsNullOrWhiteSpace(message.Status)
                             ? "unknown"
-                            : message.Status.ToLowerInvariant();
+                            : message.Status.Trim().ToLowerInvariant();
 
                         var templateName = "Unknown template";
 
-                        if (message.WhatsAppTemplateId.HasValue &&
-                            templateNames.TryGetValue(
-                                message.WhatsAppTemplateId.Value,
-                                out var foundTemplateName))
+                        if (message.WhatsAppTemplateId.HasValue)
                         {
-                            templateName = foundTemplateName;
-                        }
-                        else if (message.WhatsAppTemplateId.HasValue)
-                        {
-                            templateName =
-                                $"Template #{message.WhatsAppTemplateId.Value}";
+                            var templateId = message.WhatsAppTemplateId.Value;
+
+                            if (templateNames.TryGetValue(
+                                templateId,
+                                out var foundTemplateName)
+                                && !string.IsNullOrWhiteSpace(foundTemplateName))
+                            {
+                                templateName = foundTemplateName;
+                            }
+                            else
+                            {
+                                templateName = $"Template #{templateId}";
+                            }
                         }
 
                         <tr>
@@ -201,6 +207,20 @@
                                     .ToString("dd MMM yyyy, hh:mm tt")
                                   ?? "—")
                             </td>
+
+
+                            
+                            <td>
+                                <a class="whatsapp-chat-button"
+                                   asp-controller="Dashboard"
+                                   asp-action="WhatsAppChat"
+                                   asp-route-phoneNumber="@message.PhoneNumber">
+                                    <span class="whatsapp-icon">☏</span>
+                                    WhatsApp Chat
+                                </a>
+                            </td>
+
+
                         </tr>
                     }
                 }
@@ -224,6 +244,7 @@
                     name="pageSize"
                     class="form-control compact-select"
                     onchange="this.form.submit()">
+
                 @foreach (var size in new[] { 10, 25, 50 })
                 {
                     if (Model.PageSize == size)
