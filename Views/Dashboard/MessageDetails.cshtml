@@ -1,0 +1,112 @@
+﻿@model List<WhatsAppManagerMvc.Models.WhatsAppMessage>
+
+@{
+    ViewData["Title"] = "Message Details";
+    var phoneNumber = ViewBag.PhoneNumber as string ?? string.Empty;
+}
+
+<section class="hero">
+    <div>
+        <div class="eyebrow hero-eyebrow">ACTIVITY</div>
+        <h1>Message Details</h1>
+        <p>Search and review WhatsApp message delivery records.</p>
+    </div>
+    <div class="hero-mark">WA</div>
+</section>
+
+@if (ViewBag.Error is string error &&
+     !string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert danger">@error</div>
+}
+
+<section class="panel">
+    <div class="panel-heading details-heading">
+        <div>
+            <div class="eyebrow">MESSAGE RECORDS</div>
+            <h2>Message Details</h2>
+            <p class="details-phone">@phoneNumber</p>
+        </div>
+
+        <a class="button-secondary back-button"
+           asp-controller="Dashboard"
+           asp-action="MessageHistory">
+            <span aria-hidden="true">←</span>
+            Back to History
+        </a>
+    </div>
+
+    <div class="table-wrap">
+        <table class="message-table details-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Sent</th>
+                    <th>Delivered</th>
+                    <th>Read</th>
+                    <th>Error / Reply</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model == null || Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="empty-cell">
+                            No messages found for this phone number.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        var status = string.IsNullOrWhiteSpace(item.Status)
+                            ? "unknown"
+                            : item.Status.ToLowerInvariant();
+
+                        <tr>
+                            <td class="id-cell">@item.Id</td>
+
+                            <td>
+                                <span class="status-badge @status">
+                                    @status
+                                </span>
+                            </td>
+
+                            <td class="date-cell">
+                                @(item.CreatedAt?.ToLocalTime()
+                                    .ToString("dd MMM yyyy, hh:mm tt") ?? "—")
+                            </td>
+
+                            <td class="date-cell">
+                                @(item.SentAt?.ToLocalTime()
+                                    .ToString("dd MMM yyyy, hh:mm tt") ?? "—")
+                            </td>
+
+                            <td class="date-cell">
+                                @(item.DeliveredAt?.ToLocalTime()
+                                    .ToString("dd MMM yyyy, hh:mm tt") ?? "—")
+                            </td>
+
+                            <td class="date-cell">
+                                @(item.ReadAt?.ToLocalTime()
+                                    .ToString("dd MMM yyyy, hh:mm tt") ?? "—")
+                            </td>
+
+                            <td class="message-error-cell">
+                                @(item.ErrorMessage ?? item.ReplyMessage ?? "—")
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <p class="footnote">
+        Message delivery timestamps are shown in your local time.
+    </p>
+</section>

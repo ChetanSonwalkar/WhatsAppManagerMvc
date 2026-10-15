@@ -1,0 +1,147 @@
+﻿@model WhatsAppManagerMvc.Models.DashboardViewModel
+
+@{
+    ViewData["Title"] = "WhatsApp Manager";
+}
+
+<section class="hero">
+    <div>
+        <div class="eyebrow hero-eyebrow">WHATSAPP BUSINESS</div>
+        <h1>WhatsApp Manager</h1>
+        <p>Bulk Messaging Dashboard</p>
+    </div>
+    <div class="hero-mark">WA</div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.Notice))
+{
+    <div class="alert success">@Model.Notice</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert danger">@Model.Error</div>
+}
+
+<section class="panel">
+    <div class="panel-heading bulk-heading">
+        <div class="panel-title">
+            <div class="eyebrow">CAMPAIGN</div>
+            <h2>Bulk Message</h2>
+        </div>
+
+        <div class="heading-actions">
+            <span class="count-pill">@(Model.Templates?.Count ?? 0) Templates</span>
+            <a class="button-secondary history-header-button"
+               asp-controller="Dashboard"
+               asp-action="MessageHistory">
+                <span aria-hidden="true">▤</span>
+                <span>Message History</span>
+                <span aria-hidden="true">→</span>
+            </a>
+        </div>
+    </div>
+
+    <form asp-controller="Dashboard"
+          asp-action="SendBulk"
+          method="post"
+          enctype="multipart/form-data"
+          id="bulkForm">
+        @Html.AntiForgeryToken()
+
+        <div class="field">
+            <label for="templateSearch">WhatsApp Template</label>
+            <div class="template-row">
+                <div class="dropdown-wrap">
+                    <input id="templateSearch"
+                           class="form-control template-search"
+                           type="text"
+                           placeholder="Select or search template"
+                           autocomplete="off"
+                           aria-expanded="false"
+                           aria-controls="templateOptions"
+                           required />
+                    <span class="dropdown-chevron" aria-hidden="true">⌄</span>
+                    <div id="templateOptions" class="dropdown-options" role="listbox">
+                        @if (Model.Templates != null)
+                        {
+                            @foreach (var template in Model.Templates.Where(x => x.IsActive))
+                            {
+                                <button type="button"
+                                        class="template-option"
+                                        data-id="@template.Id"
+                                        data-name="@template.TemplateName"
+                                        role="option">
+                                    <span>@template.TemplateName</span>
+                                    <small>ID: @template.Id</small>
+                                </button>
+                            }
+                        }
+                        else
+                        {
+                            <div class="template-option">
+                                <span>No templates available</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <a class="icon-button refresh"
+                   asp-controller="Dashboard"
+                   asp-action="Index"
+                   title="Refresh templates"
+                   aria-label="Refresh templates">↻</a>
+            </div>
+            <input type="hidden" id="templateId" name="templateId" />
+            <div class="field-hint" id="templateHint">Template ID: Not selected</div>
+        </div>
+
+        <div class="separator"></div>
+
+        <div class="field">
+            <label for="recipientFile">Recipient File</label>
+            <div class="file-row">
+                <div class="file-name" id="recipientName">No recipient file selected</div>
+                <label class="icon-button attach" for="recipientFile" title="Choose recipient file">📎</label>
+                <input class="visually-hidden" id="recipientFile" name="recipientFile"
+                       type="file" accept=".xlsx,.xls,.csv,.tsv" />
+                <button class="icon-button clear" type="button"
+                        data-clear="recipientFile" data-display="recipientName"
+                        title="Remove file">
+                    ×
+                </button>
+            </div>
+            <div class="field-hint">Supported: XLSX, XLS, CSV, TSV</div>
+        </div>
+
+        <div class="field">
+            <label for="headerImage">Header Image <span class="optional">(Optional)</span></label>
+            <div class="file-row">
+                <div class="file-name" id="headerImageName">No header image selected</div>
+                <label class="icon-button image-button" for="headerImage" title="Choose header image">▧</label>
+                <input class="visually-hidden" id="headerImage" name="headerImage"
+                       type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
+                <button class="icon-button clear" type="button"
+                        data-clear="headerImage" data-display="headerImageName"
+                        title="Remove image">
+                    ×
+                </button>
+            </div>
+            <div class="field-hint">Supported: JPG, JPEG, PNG</div>
+        </div>
+
+        <button type="submit" class="button-primary send-button" id="sendButton">
+            ➤ Send Bulk Messages
+        </button>
+        <div class="form-validation" id="formValidation" role="alert"></div>
+    </form>
+</section>
+
+@* <a class="history-link" asp-controller="Dashboard" asp-action="MessageHistory">
+    <div class="history-link-content">
+        <div class="eyebrow">ACTIVITY</div>
+        <h2>Message History</h2>
+        <p>Search messages, check delivery status and view phone history.</p>
+    </div>
+    <span class="history-arrow" aria-hidden="true">→</span>
+</a>
+ *@

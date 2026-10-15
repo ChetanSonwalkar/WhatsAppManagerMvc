@@ -1,0 +1,285 @@
+﻿@model WhatsAppManagerMvc.Models.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Message History";
+
+    var start = Model.TotalMessages == 0
+        ? 0
+        : ((Model.Page - 1) * Model.PageSize) + 1;
+
+    var end = Math.Min(
+        Model.Page * Model.PageSize,
+        Model.TotalMessages);
+
+    var statuses = new[]
+    {
+        "All", "sent", "delivered", "read", "failed", "pending"
+    };
+
+    var templateNames = ViewBag.TemplateNames as Dictionary<int, string>
+        ?? new Dictionary<int, string>();
+}
+
+<section class="hero">
+    <div>
+        <div class="eyebrow hero-eyebrow">ACTIVITY</div>
+        <h1>Message History</h1>
+        <p>Search and review WhatsApp message delivery records.</p>
+    </div>
+    <div class="hero-mark">WA</div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert danger">@Model.Error</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Notice))
+{
+    <div class="alert success">@Model.Notice</div>
+}
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <div class="eyebrow">MESSAGE RECORDS</div>
+            <h2>All Messages</h2>
+        </div>
+
+        <div class="history-actions">
+            <span class="count-pill">@Model.TotalMessages Records</span>
+
+            <a class="button-secondary"
+               asp-controller="Dashboard"
+               asp-action="Index">
+                ← Bulk Message
+            </a>
+        </div>
+    </div>
+
+    <form id="messageFilterForm"
+          method="get"
+          asp-controller="Dashboard"
+          asp-action="MessageHistory"
+          class="filter-row">
+
+        <input id="messageSearch"
+               class="form-control"
+               type="search"
+               name="search"
+               value="@Model.Search"
+               placeholder="Search name, phone, template or ID..."
+               aria-label="Search messages"
+               autocomplete="off" />
+
+        <select id="messageStatus"
+                class="form-control"
+                name="status"
+                aria-label="Filter by status">
+            @foreach (var item in statuses)
+            {
+                if (string.Equals(
+                    Model.Status ?? "All",
+                    item,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    <option value="@item" selected>@item</option>
+                }
+                else
+                {
+                    <option value="@item">@item</option>
+                }
+            }
+        </select>
+
+        <input type="hidden"
+               id="filterPage"
+               name="page"
+               value="1" />
+
+        <input type="hidden"
+               name="pageSize"
+               value="@Model.PageSize" />
+
+        <button class="icon-button search-button"
+                type="submit"
+                title="Search"
+                aria-label="Search">
+            ⌕
+        </button>
+
+        <a class="icon-button refresh"
+           asp-controller="Dashboard"
+           asp-action="MessageHistory"
+           title="Clear filters and refresh"
+           aria-label="Clear filters and refresh">
+            ↻
+        </a>
+    </form>
+
+    <div class="table-wrap">
+        <table class="message-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Candidate / Phone</th>
+                    <th>Template Name</th>
+                    <th>Status</th>
+                    <th>Sent At</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Messages == null || Model.Messages.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="empty-cell">
+                            No messages found.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var message in Model.Messages)
+                    {
+                        var state = string.IsNullOrWhiteSpace(message.Status)
+                            ? "unknown"
+                            : message.Status.ToLowerInvariant();
+
+                        var templateName = "Unknown template";
+
+                        if (message.WhatsAppTemplateId.HasValue &&
+                            templateNames.TryGetValue(
+                                message.WhatsAppTemplateId.Value,
+                                out var foundTemplateName))
+                        {
+                            templateName = foundTemplateName;
+                        }
+                        else if (message.WhatsAppTemplateId.HasValue)
+                        {
+                            templateName =
+                                $"Template #{message.WhatsAppTemplateId.Value}";
+                        }
+
+                        <tr>
+                            <td class="id-cell">@message.Id</td>
+
+                            <td>
+                                <a class="candidate-link"
+                                   asp-controller="Dashboard"
+                                   asp-action="MessageDetails"
+                                   asp-route-phoneNumber="@message.PhoneNumber">
+                                    @(string.IsNullOrWhiteSpace(message.CandidateName)
+                                        ? "Unknown candidate"
+                                        : message.CandidateName)
+                                </a>
+
+                                <a class="phone-link"
+                                   asp-controller="Dashboard"
+                                   asp-action="MessageDetails"
+                                   asp-route-phoneNumber="@message.PhoneNumber">
+                                    @message.PhoneNumber
+                                </a>
+                            </td>
+
+                            <td>
+                                <span class="template-name-cell">
+                                    @templateName
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="status-badge @state">
+                                    @state
+                                </span>
+                            </td>
+
+                            <td class="date-cell">
+                                @(message.SentAt?.ToLocalTime()
+                                    .ToString("dd MMM yyyy, hh:mm tt")
+                                  ?? message.CreatedAt?.ToLocalTime()
+                                    .ToString("dd MMM yyyy, hh:mm tt")
+                                  ?? "—")
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination-row">
+        <form method="get"
+              asp-controller="Dashboard"
+              asp-action="MessageHistory"
+              class="rows-form">
+
+            <input type="hidden" name="search" value="@Model.Search" />
+            <input type="hidden" name="status" value="@Model.Status" />
+            <input type="hidden" name="page" value="1" />
+
+            <label for="pageSize">Rows</label>
+
+            <select id="pageSize"
+                    name="pageSize"
+                    class="form-control compact-select"
+                    onchange="this.form.submit()">
+                @foreach (var size in new[] { 10, 25, 50 })
+                {
+                    if (Model.PageSize == size)
+                    {
+                        <option value="@size" selected>@size</option>
+                    }
+                    else
+                    {
+                        <option value="@size">@size</option>
+                    }
+                }
+            </select>
+        </form>
+
+        <span class="page-info">
+            Showing @start–@end of @Model.TotalMessages
+        </span>
+
+        <div class="page-actions">
+            @if (Model.Page > 1)
+            {
+                <a class="page-button"
+                   asp-controller="Dashboard"
+                   asp-action="MessageHistory"
+                   asp-route-search="@Model.Search"
+                   asp-route-status="@Model.Status"
+                   asp-route-page="@(Model.Page - 1)"
+                   asp-route-pageSize="@Model.PageSize">‹</a>
+            }
+            else
+            {
+                <span class="page-button disabled">‹</span>
+            }
+
+            <span class="page-number">
+                Page @Model.Page of @Model.TotalPages
+            </span>
+
+            @if (Model.Page < Model.TotalPages)
+            {
+                <a class="page-button"
+                   asp-controller="Dashboard"
+                   asp-action="MessageHistory"
+                   asp-route-search="@Model.Search"
+                   asp-route-status="@Model.Status"
+                   asp-route-page="@(Model.Page + 1)"
+                   asp-route-pageSize="@Model.PageSize">›</a>
+            }
+            else
+            {
+                <span class="page-button disabled">›</span>
+            }
+        </div>
+    </div>
+
+    <p class="footnote">
+        Select a candidate name or phone number to view its message details.
+    </p>
+</section>
