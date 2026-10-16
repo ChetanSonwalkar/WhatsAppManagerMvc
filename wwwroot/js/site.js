@@ -7,16 +7,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (filterForm && messageSearch && messageStatus) {
         messageSearch.addEventListener("input", function () {
-            if (filterPage) {
-                filterPage.value = "1";
-            }
+            if (filterPage) filterPage.value = "1";
         });
 
         messageStatus.addEventListener("change", function () {
-            if (filterPage) {
-                filterPage.value = "1";
-            }
-
+            if (filterPage) filterPage.value = "1";
             filterForm.requestSubmit();
         });
     }
@@ -69,22 +64,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 button.hidden = !matches;
 
-                if (matches) {
-                    visibleCount++;
-                }
+                if (matches) visibleCount++;
             });
 
             emptyMessage.hidden = visibleCount > 0;
         }
 
-        templateSearch.addEventListener("focus", function () {
-            filterTemplates();
-            openDropdown();
-        });
-
         templateSearch.addEventListener("click", function () {
-            filterTemplates();
-            openDropdown();
+            if (templateOptions.classList.contains("open")) {
+                closeDropdown();
+            } else {
+                filterTemplates();
+                openDropdown();
+            }
         });
 
         templateSearch.addEventListener("input", function () {
@@ -93,6 +85,11 @@ document.addEventListener("DOMContentLoaded", function () {
             if (templateHint) {
                 templateHint.textContent = "Template ID: Not selected";
             }
+
+            templateButtons.forEach(function (button) {
+                button.classList.remove("selected");
+                button.setAttribute("aria-selected", "false");
+            });
 
             filterTemplates();
             openDropdown();
@@ -108,6 +105,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         "Template ID: " + templateId.value;
                 }
 
+                templateButtons.forEach(function (item) {
+                    const selected = item === button;
+                    item.classList.toggle("selected", selected);
+                    item.setAttribute("aria-selected", String(selected));
+                });
+
                 if (formValidation) {
                     formValidation.textContent = "";
                 }
@@ -117,32 +120,82 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         document.addEventListener("click", function (event) {
-            if (templateWrap && !templateWrap.contains(event.target)) {
+            if (
+                templateWrap &&
+                !templateWrap.contains(event.target)
+            ) {
                 closeDropdown();
             }
+        });
+
+        templateSearch.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+                closeDropdown();
+            }
+
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+
+                if (!templateOptions.classList.contains("open")) {
+                    filterTemplates();
+                    openDropdown();
+                }
+
+                const firstVisible = templateButtons.find(function (button) {
+                    return !button.hidden;
+                });
+
+                if (firstVisible) firstVisible.focus();
+            }
+        });
+
+        templateButtons.forEach(function (button) {
+            button.addEventListener("keydown", function (event) {
+                const visibleButtons = templateButtons.filter(function (item) {
+                    return !item.hidden;
+                });
+
+                const index = visibleButtons.indexOf(button);
+
+                if (event.key === "Escape") {
+                    closeDropdown();
+                    templateSearch.focus();
+                }
+
+                if (event.key === "ArrowDown" && visibleButtons[index + 1]) {
+                    event.preventDefault();
+                    visibleButtons[index + 1].focus();
+                }
+
+                if (event.key === "ArrowUp") {
+                    event.preventDefault();
+
+                    if (visibleButtons[index - 1]) {
+                        visibleButtons[index - 1].focus();
+                    } else {
+                        templateSearch.focus();
+                    }
+                }
+            });
         });
 
         bulkForm.addEventListener("submit", function (event) {
             if (!templateId.value) {
                 event.preventDefault();
 
-                templateSearch.setCustomValidity(
-                    "Please select a template from the dropdown."
-                );
-
-                templateSearch.reportValidity();
-                templateSearch.setCustomValidity("");
-                openDropdown();
-
                 if (formValidation) {
                     formValidation.textContent =
-                        "Please select a template from the dropdown.";
+                        "Please select a template from the list.";
                 }
 
+                filterTemplates();
+                openDropdown();
+                templateSearch.focus();
                 return;
             }
 
-            const recipientFile = document.getElementById("recipientFile");
+            const recipientFile =
+                document.getElementById("recipientFile");
 
             if (!recipientFile || !recipientFile.files.length) {
                 event.preventDefault();
@@ -164,9 +217,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function updateFileName(input, displayId, defaultText) {
         const display = document.getElementById(displayId);
 
-        if (!input || !display) {
-            return;
-        }
+        if (!input || !display) return;
 
         display.textContent =
             input.files && input.files.length
@@ -202,21 +253,20 @@ document.addEventListener("DOMContentLoaded", function () {
             event.preventDefault();
             event.stopPropagation();
 
-            const inputId = button.dataset.clear;
+            const input = document.getElementById(button.dataset.clear);
             const displayId = button.dataset.display;
-            const input = document.getElementById(inputId);
 
-            if (input) {
-                input.value = "";
-            }
+            if (!input) return;
 
-            if (inputId === "recipientFile") {
+            input.value = "";
+
+            if (input.id === "recipientFile") {
                 updateFileName(
                     input,
                     displayId,
                     "No recipient file selected"
                 );
-            } else if (inputId === "headerImage") {
+            } else if (input.id === "headerImage") {
                 updateFileName(
                     input,
                     displayId,
@@ -227,60 +277,46 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     document.querySelectorAll("[data-file-picker]").forEach(function (row) {
-        const inputId = row.dataset.filePicker;
-        const fileInput = document.getElementById(inputId);
+        const input = document.getElementById(row.dataset.filePicker);
 
-        if (!fileInput) {
-            return;
-        }
+        if (!input) return;
 
         row.addEventListener("click", function (event) {
-            if (event.target.closest("[data-clear]")) {
-                return;
-            }
+            if (event.target.closest("[data-clear]")) return;
 
-            if (event.target !== fileInput) {
-                fileInput.click();
-            }
+            input.click();
         });
 
         row.addEventListener("keydown", function (event) {
-            if (event.target.closest("[data-clear]")) {
-                return;
-            }
+            if (event.target.closest("[data-clear]")) return;
 
             if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                fileInput.click();
+                input.click();
             }
         });
     });
 
+    const chatBody = document.getElementById("waChatBody");
 
-    document.addEventListener("DOMContentLoaded", function () {
+    if (chatBody) {
         const search = document.getElementById("waMessageSearch");
-        const chatBody = document.getElementById("waChatBody");
         const refreshButton = document.getElementById("waRefreshButton");
         const visibleCount = document.getElementById("waVisibleCount");
         const noResults = document.getElementById("waNoSearchResults");
-
-        if (!chatBody) return;
 
         const messageItems = Array.from(
             chatBody.querySelectorAll(".wa-message-item")
         );
 
-        function filterMessages() {
+        function filterChatItems() {
             const term = (search?.value || "").trim().toLowerCase();
             let visible = 0;
 
             messageItems.forEach(function (item) {
-                const text = item.innerText.toLowerCase();
-                const match = !term || text.includes(term);
+                item.hidden = !item.innerText.toLowerCase().includes(term);
 
-                item.hidden = !match;
-
-                if (match) visible++;
+                if (!item.hidden) visible++;
             });
 
             if (visibleCount) {
@@ -288,12 +324,13 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             if (noResults) {
-                noResults.hidden = visible !== 0 || messageItems.length === 0;
+                noResults.hidden =
+                    visible !== 0 || messageItems.length === 0;
             }
         }
 
         if (search) {
-            search.addEventListener("input", filterMessages);
+            search.addEventListener("input", filterChatItems);
         }
 
         if (refreshButton) {
@@ -303,6 +340,112 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         chatBody.scrollTop = chatBody.scrollHeight;
-    });
+    }
 
+    const waBody = document.getElementById("waBody");
+
+    if (waBody) {
+        const search = document.getElementById("waSearch");
+        const count = document.getElementById("waCount");
+        const noResults = document.getElementById("waNoResults");
+        const refresh = document.getElementById("waRefresh");
+
+        const rows = Array.from(
+            waBody.querySelectorAll(".wa-message-row")
+        );
+
+        function filterMessages() {
+            const term = (search?.value || "").trim().toLowerCase();
+            let visible = 0;
+
+            rows.forEach(function (row) {
+                const text = (
+                    row.innerText + " " + (row.dataset.search || "")
+                ).toLowerCase();
+
+                row.hidden = !!term && !text.includes(term);
+
+                if (!row.hidden) visible++;
+            });
+
+            waBody.querySelectorAll(".wa-date").forEach(function (date) {
+                let next = date.nextElementSibling;
+                let found = false;
+
+                while (next && !next.classList.contains("wa-date")) {
+                    if (
+                        next.classList.contains("wa-message-row") &&
+                        !next.hidden
+                    ) {
+                        found = true;
+                        break;
+                    }
+
+                    next = next.nextElementSibling;
+                }
+
+                date.hidden = !found;
+            });
+
+            if (count) {
+                count.textContent = visible + " messages";
+            }
+
+            if (noResults) {
+                noResults.hidden = visible > 0;
+            }
+        }
+
+        if (search) {
+            search.addEventListener("input", filterMessages);
+        }
+
+        if (refresh) {
+            refresh.addEventListener("click", function () {
+                window.location.reload();
+            });
+        }
+
+        const textForm = document.getElementById("waTextForm");
+        const textInput = document.getElementById("waTextMessage");
+        const sendTextButton = document.getElementById("waSendTextButton");
+
+        if (textInput && sendTextButton) {
+            textInput.addEventListener("input", function () {
+                sendTextButton.disabled = !textInput.value.trim();
+                textInput.style.height = "auto";
+                textInput.style.height =
+                    Math.min(textInput.scrollHeight, 130) + "px";
+            });
+
+            sendTextButton.disabled = !textInput.value.trim();
+        }
+
+        if (textForm && textInput) {
+            textForm.addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                const text = textInput.value.trim();
+                const phone = "@waNumber";
+
+                if (!text) {
+                    textInput.focus();
+                    return;
+                }
+
+                if (!phone) {
+                    alert("Phone number is missing.");
+                    return;
+                }
+
+                const url =
+                    "https://wa.me/" + phone +
+                    "?text=" + encodeURIComponent(text);
+
+                window.open(url, "_blank", "noopener,noreferrer");
+            });
+        }
+
+        waBody.scrollTop = waBody.scrollHeight;
+    }
 });

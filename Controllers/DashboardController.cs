@@ -42,7 +42,7 @@ public class DashboardController : Controller
     {
         page = Math.Max(1, page);
 
-        if (pageSize is not (10 or 25 or 50))
+        if (pageSize is not (10 or 25 or 50 or 100) )
             pageSize = 10;
 
         var model = new DashboardViewModel

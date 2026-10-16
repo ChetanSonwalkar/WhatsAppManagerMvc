@@ -4,8 +4,6 @@
     ViewData["Title"] = "WhatsApp Manager";
 }
 
-
-
 <div class="bulk-page">
 
     <section class="hero">
@@ -28,6 +26,7 @@
     }
 
     <section class="panel">
+
         <div class="panel-heading bulk-heading">
             <div class="panel-title">
                 <div class="eyebrow">CAMPAIGN</div>
@@ -58,20 +57,27 @@
             @Html.AntiForgeryToken()
 
             <div class="field">
+
                 <label for="templateSearch">WhatsApp Template</label>
 
                 <div class="template-row">
-                    <div class="dropdown-wrap">
+
+                    <div class="dropdown-wrap"
+                         id="templateDropdownWrap">
+
                         <input id="templateSearch"
+                               name="templateSearch"
                                class="form-control template-search"
                                type="text"
                                placeholder="Select or search template"
                                autocomplete="off"
                                aria-expanded="false"
                                aria-controls="templateOptions"
+                               aria-haspopup="listbox"
                                required />
 
-                        <span class="dropdown-chevron" aria-hidden="true">⌄</span>
+                        <span class="dropdown-chevron"
+                              aria-hidden="true">⌄</span>
 
                         <div id="templateOptions"
                              class="dropdown-options"
@@ -85,18 +91,22 @@
                                             class="template-option"
                                             data-id="@template.Id"
                                             data-name="@template.TemplateName"
-                                            role="option">
+                                            role="option"
+                                            aria-selected="false">
+
                                         <span>@template.TemplateName</span>
                                         <small>ID: @template.Id</small>
+
                                     </button>
                                 }
                             }
                             else
                             {
-                                <div class="template-option">
-                                    <span>No templates available</span>
+                                <div class="template-empty-message">
+                                    No templates available.
                                 </div>
                             }
+
                         </div>
                     </div>
 
@@ -105,90 +115,115 @@
                        asp-action="Index"
                        title="Refresh templates"
                        aria-label="Refresh templates">↻</a>
+
                 </div>
 
-                <input type="hidden" id="templateId" name="templateId" />
+                <input type="hidden"
+                       id="templateId"
+                       name="templateId"
+                       required />
 
                 <div class="field-hint" id="templateHint">
                     Template ID: Not selected
                 </div>
+
             </div>
 
             <div class="separator"></div>
 
             <div class="field">
+
                 <label for="recipientFile">Recipient File</label>
 
-                <div class="file-row">
+                <div class="file-row file-picker-row"
+                     data-file-picker="recipientFile"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Choose recipient file">
+
                     <div class="file-name" id="recipientName">
                         No recipient file selected
                     </div>
 
-                  @*   <label class="icon-button attach"
-                           for="recipientFile"
-                           title="Choose recipient file">📎</label> *@
+                    <div class="icon-button attach"
+                         aria-hidden="true">
+                        <img src="~/images/xls.png"
+                             alt=""
+                             width="40"
+                             height="40" />
+                    </div>
 
-                    <label class="icon-button attach"
-                           for="recipientFile"
-                           title="Choose recipient file">
-                        <img src="~/images/xls.png" hight="40" width="40" />
-                       </label>
-
-                    <input class="visually-hidden"
+                    <input class="visually-hidden file-picker-input"
                            id="recipientFile"
                            name="recipientFile"
                            type="file"
-                           accept=".xlsx,.xls,.csv,.tsv" />
+                           accept=".xlsx,.xls,.csv,.tsv"
+                           aria-label="Choose recipient file" />
 
                     <button class="icon-button clear"
                             type="button"
                             data-clear="recipientFile"
                             data-display="recipientName"
-                            title="Remove file">
+                            title="Remove file"
+                            aria-label="Remove recipient file">
                         ×
                     </button>
+
                 </div>
 
-                <div class="field-hint">Supported: XLSX, XLS, CSV, TSV</div>
+                <div class="field-hint">
+                    Supported: XLSX, XLS, CSV, TSV
+                </div>
+
             </div>
 
             <div class="field">
+
                 <label for="headerImage">
-                    Header Image <span class="optional">(Optional)</span>
+                    Header Image
+                    <span class="optional">(Optional)</span>
                 </label>
 
-                <div class="file-row">
+                <div class="file-row file-picker-row"
+                     data-file-picker="headerImage"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Choose header image">
+
                     <div class="file-name" id="headerImageName">
                         No header image selected
                     </div>
 
-                  @*   <label class="icon-button image-button"
-                           for="headerImage"
-                           title="Choose header image">▧</label> *@
+                    <div class="icon-button image-button"
+                         aria-hidden="true">
+                        <img src="~/images/picture.png"
+                             alt=""
+                             width="40"
+                             height="40" />
+                    </div>
 
-                    <label class="icon-button image-button"
-                           for="headerImage"
-                           title="Choose header image">
-                        <img src="~/images/picture.png" hight="40" width="40" />
-                       </label>
-
-
-                    <input class="visually-hidden"
+                    <input class="visually-hidden file-picker-input"
                            id="headerImage"
                            name="headerImage"
                            type="file"
-                           accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
+                           accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                           aria-label="Choose header image" />
 
                     <button class="icon-button clear"
                             type="button"
                             data-clear="headerImage"
                             data-display="headerImageName"
-                            title="Remove image">
+                            title="Remove image"
+                            aria-label="Remove header image">
                         ×
                     </button>
+
                 </div>
 
-                <div class="field-hint">Supported: JPG, JPEG, PNG</div>
+                <div class="field-hint">
+                    Supported: JPG, JPEG, PNG
+                </div>
+
             </div>
 
             <button type="submit"
@@ -200,6 +235,8 @@
             <div class="form-validation"
                  id="formValidation"
                  role="alert"></div>
+
         </form>
+
     </section>
 </div>
