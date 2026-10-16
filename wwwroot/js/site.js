@@ -406,45 +406,205 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
+
         const textForm = document.getElementById("waTextForm");
         const textInput = document.getElementById("waTextMessage");
-        const sendTextButton = document.getElementById("waSendTextButton");
+        const sendButton = document.getElementById("waSendTextButton");
+        const toggleButton = document.getElementById("waAttachmentToggle");
+        const attachmentMenu = document.getElementById("waAttachmentMenu");
 
-        if (textInput && sendTextButton) {
-            textInput.addEventListener("input", function () {
-                sendTextButton.disabled = !textInput.value.trim();
-                textInput.style.height = "auto";
-                textInput.style.height =
-                    Math.min(textInput.scrollHeight, 130) + "px";
-            });
+        const imageFile = document.getElementById("waImageFile");
+        const documentFile = document.getElementById("waDocumentFile");
+        const videoFile = document.getElementById("waVideoFile");
+        const audioFile = document.getElementById("waAudioFile");
 
-            sendTextButton.disabled = !textInput.value.trim();
+        const selectedBox = document.getElementById("waSelectedFile");
+        const selectedName = document.getElementById("waSelectedFileName");
+        const removeFileButton = document.getElementById("waRemoveFile");
+        const numberPanel = document.getElementById("waNumberPanel");
+        const contactNumber = document.getElementById("waContactNumber");
+        const addNumberButton = document.getElementById("waAddNumber");
+        const statusElement = document.getElementById("waShareStatus");
+
+        let selectedFile = null;
+
+        const phone = document.querySelector(".wa-contact h2")
+            ?.textContent.trim().replace(/\D/g, "") || "";
+
+        function showStatus(message) {
+            if (statusElement) statusElement.textContent = message;
         }
 
-        if (textForm && textInput) {
-            textForm.addEventListener("submit", function (event) {
-                event.preventDefault();
+        function updateSendButton() {
+            if (sendButton) {
+                sendButton.disabled =
+                    !textInput?.value.trim() && !selectedFile;
+            }
+        }
 
-                const text = textInput.value.trim();
-                const phone = "@waNumber";
+        function closeAttachmentMenu() {
+            if (attachmentMenu) attachmentMenu.hidden = true;
+            toggleButton?.setAttribute("aria-expanded", "false");
+        }
 
-                if (!text) {
-                    textInput.focus();
+        toggleButton?.addEventListener("click", function (event) {
+            event.stopPropagation();
+
+            const shouldOpen = attachmentMenu.hidden;
+            attachmentMenu.hidden = !shouldOpen;
+            toggleButton.setAttribute("aria-expanded", String(shouldOpen));
+        });
+
+        document.addEventListener("click", function (event) {
+            if (
+                attachmentMenu &&
+                !attachmentMenu.contains(event.target) &&
+                !toggleButton?.contains(event.target)
+            ) {
+                closeAttachmentMenu();
+            }
+        });
+
+        attachmentMenu?.querySelectorAll("[data-share-type]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const type = button.dataset.shareType;
+                closeAttachmentMenu();
+
+                if (type === "contact") {
+                    if (numberPanel) numberPanel.hidden = !numberPanel.hidden;
+                    contactNumber?.focus();
                     return;
                 }
 
-                if (!phone) {
-                    alert("Phone number is missing.");
-                    return;
-                }
+                const inputs = {
+                    image: imageFile,
+                    document: documentFile,
+                    video: videoFile,
+                    audio: audioFile
+                };
 
-                const url =
-                    "https://wa.me/" + phone +
-                    "?text=" + encodeURIComponent(text);
-
-                window.open(url, "_blank", "noopener,noreferrer");
+                inputs[type]?.click();
             });
+        });
+
+        function onFileSelected(input) {
+            if (!input?.files?.length) return;
+
+            selectedFile = input.files[0];
+
+            [imageFile, documentFile, videoFile, audioFile].forEach(function (item) {
+                if (item && item !== input) item.value = "";
+            });
+
+            if (selectedName) selectedName.textContent = selectedFile.name;
+            if (selectedBox) selectedBox.hidden = false;
+
+            showStatus("Attachment selected.");
+            updateSendButton();
         }
+
+        [imageFile, documentFile, videoFile, audioFile].forEach(function (input) {
+            input?.addEventListener("change", function () {
+                onFileSelected(input);
+            });
+        });
+
+        removeFileButton?.addEventListener("click", function () {
+            selectedFile = null;
+
+            [imageFile, documentFile, videoFile, audioFile].forEach(function (input) {
+                if (input) input.value = "";
+            });
+
+            if (selectedBox) selectedBox.hidden = true;
+            if (selectedName) selectedName.textContent = "";
+
+            showStatus("");
+            updateSendButton();
+        });
+
+        addNumberButton?.addEventListener("click", function () {
+            const rawNumber = (contactNumber?.value || "").trim();
+            const digits = rawNumber.replace(/\D/g, "");
+
+            if (digits.length < 7 || digits.length > 15) {
+                showStatus("Enter a valid phone number, including country code.");
+                contactNumber?.focus();
+                return;
+            }
+
+            if (textInput) {
+                const contactText = "Contact number: +" + digits;
+                textInput.value = textInput.value.trim()
+                    ? textInput.value.trim() + "\n" + contactText
+                    : contactText;
+
+                textInput.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+
+            if (numberPanel) numberPanel.hidden = true;
+            showStatus("Contact number added to your message.");
+            updateSendButton();
+        });
+
+        textInput?.addEventListener("input", function () {
+            textInput.style.height = "auto";
+            textInput.style.height =
+                Math.min(textInput.scrollHeight, 130) + "px";
+
+            updateSendButton();
+        });
+
+        updateSendButton();
+
+        textForm?.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const message = textInput?.value.trim() || "";
+
+            if (!phone) {
+                showStatus("Recipient phone number is missing.");
+                return;
+            }
+
+            if (!message && !selectedFile) {
+                showStatus("Type a message or select an attachment.");
+                return;
+            }
+
+            if (selectedFile && navigator.share && navigator.canShare) {
+                try {
+                    const shareData = {
+                        title: "WhatsApp message",
+                        text: message,
+                        files: [selectedFile]
+                    };
+
+                    if (navigator.canShare({ files: [selectedFile] })) {
+                        await navigator.share(shareData);
+                        showStatus("Share dialog opened or completed.");
+                        return;
+                    }
+                } catch (error) {
+                    if (error.name === "AbortError") {
+                        showStatus("Sharing cancelled.");
+                        return;
+                    }
+                }
+            }
+
+            const whatsappUrl = "https://wa.me/" + phone +
+                (message ? "?text=" + encodeURIComponent(message) : "");
+
+            if (selectedFile) {
+                showStatus(
+                    "This browser cannot share the file directly. " +
+                    "WhatsApp will open; attach the file there manually."
+                );
+            }
+
+            window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        });
 
         waBody.scrollTop = waBody.scrollHeight;
     }

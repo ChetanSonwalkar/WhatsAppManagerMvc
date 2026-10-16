@@ -263,9 +263,14 @@
         <div class="wa-header">
             <div class="wa-avatar">WA</div>
 
-            <div class="wa-contact">
+            @* <div class="wa-contact">
                 <h2>@phoneNumber</h2>
                 <p>WhatsApp message history</p>
+            </div> *@
+
+            <div class="wa-contact">
+                <h2>@ViewBag.CandidateName</h2>
+                <p>@phoneNumber</p>
             </div>
 
             <div class="wa-actions">
@@ -563,25 +568,119 @@
             </div>
         </div>
 
-        <form id="waTextForm" class="wa-composer">
-            <textarea id="waTextMessage"
-                      class="wa-composer-input"
-                      rows="1"
-                      maxlength="4096"
-                      placeholder="Type a message..."
-                      aria-label="Type a WhatsApp message"></textarea>
+     
 
-            <button type="submit"
-                    id="waSendTextButton"
-                    class="wa-send-text"
-                    aria-label="Open WhatsApp to send message"
-                    title="Send message">
-                ➤
-            </button>
-        </form>
-        <div class="wa-composer-note">
-            Send opens WhatsApp with your message pre-filled. Confirm and send it in WhatsApp.
-        </div>
+            <input type="file"
+                   id="waImageFile"
+                   accept="image/*"
+                   hidden />
+
+            <input type="file"
+                   id="waDocumentFile"
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                   hidden />
+
+            <input type="file"
+                   id="waVideoFile"
+                   accept="video/*"
+                   hidden />
+
+            <input type="file"
+                   id="waAudioFile"
+                   accept="audio/*"
+                   hidden />
+
+            <div id="waSelectedFile" class="wa-selected-file" hidden>
+                <span id="waSelectedFileName"></span>
+                <button type="button" id="waRemoveFile" aria-label="Remove attachment">×</button>
+            </div>
+
+            <div id="waNumberPanel" class="wa-number-panel" hidden>
+                <input type="tel"
+                       id="waContactNumber"
+                       maxlength="15"
+                       placeholder="Enter mobile number"
+                       aria-label="Mobile number to share" />
+
+                <button type="button" id="waAddNumber">Add number</button>
+            </div>
+
+         
+            <div class="wa-share-panel">
+                <div id="waAttachmentMenu" class="wa-attachment-menu" hidden>
+                    <button type="button" data-share-type="image">
+                        <span class="wa-menu-icon image-icon">▧</span>
+                        <span>Photos</span>
+                    </button>
+
+                    <button type="button" data-share-type="document">
+                        <span class="wa-menu-icon document-icon">▤</span>
+                        <span>Documents</span>
+                    </button>
+
+                    <button type="button" data-share-type="video">
+                        <span class="wa-menu-icon video-icon">▷</span>
+                        <span>Videos</span>
+                    </button>
+
+                    <button type="button" data-share-type="audio">
+                        <span class="wa-menu-icon audio-icon">♫</span>
+                        <span>Audio</span>
+                    </button>
+
+                    <button type="button" data-share-type="contact">
+                        <span class="wa-menu-icon contact-icon">☎</span>
+                        <span>Contact</span>
+                    </button>
+                </div>
+
+                <input type="file" id="waImageFile" accept="image/*" hidden />
+                <input type="file" id="waDocumentFile"
+                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" hidden />
+                <input type="file" id="waVideoFile" accept="video/*" hidden />
+                <input type="file" id="waAudioFile" accept="audio/*" hidden />
+
+                <div id="waSelectedFile" class="wa-selected-file" hidden>
+                    <span id="waSelectedFileName"></span>
+                    <button type="button" id="waRemoveFile" aria-label="Remove attachment">×</button>
+                </div>
+
+                <div id="waNumberPanel" class="wa-number-panel" hidden>
+                    <input type="tel" id="waContactNumber"
+                           maxlength="16" placeholder="Enter contact number" />
+                    <button type="button" id="waAddNumber">Add</button>
+                </div>
+
+                <form id="waTextForm" class="wa-composer">
+                    <button type="button"
+                            id="waAttachmentToggle"
+                            class="wa-attachment-toggle"
+                            aria-label="Open attachments"
+                            aria-expanded="false"
+                            title="Attach">
+                        +
+                    </button>
+
+                    <textarea id="waTextMessage"
+                              class="wa-composer-input"
+                              rows="1"
+                              maxlength="4096"
+                              placeholder="Type a message..."
+                              aria-label="Type a message"></textarea>
+
+                    <button type="submit"
+                            id="waSendTextButton"
+                            class="wa-send-text"
+                            aria-label="Share message"
+                            title="Share">
+                        ➤
+                    </button>
+                </form>
+
+                <div id="waShareStatus" class="wa-share-status" role="status"></div>
+            </div>
+
+
 
     </section>
 </div>

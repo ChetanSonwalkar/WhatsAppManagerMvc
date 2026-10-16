@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using WhatsAppManagerMvc.Models;
 using WhatsAppManagerMvc.Services;
 using System.Text.Json;
+using System.Globalization;
+
 
 namespace WhatsAppManagerMvc.Controllers;
 
@@ -71,16 +73,77 @@ public class DashboardController : Controller
 
             var query = messages.AsEnumerable();
 
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    query = query.Where(x =>
+            //        x.Id.ToString().Contains(
+            //            search, StringComparison.OrdinalIgnoreCase) ||
+            //        (x.PhoneNumber?.Contains(
+            //            search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            //        (x.CandidateName?.Contains(
+            //            search, StringComparison.OrdinalIgnoreCase) ?? false));
+            //}
+
+
+            //if (!string.IsNullOrWhiteSpace(search))
+            //{
+            //    query = query.Where(x =>
+            //        x.Id.ToString().Contains(
+            //            search,
+            //            StringComparison.OrdinalIgnoreCase) ||
+
+            //        (x.PhoneNumber?.Contains(
+            //            search,
+            //            StringComparison.OrdinalIgnoreCase) ?? false) ||
+
+            //        (x.CandidateName?.Contains(
+            //            search,
+            //            StringComparison.OrdinalIgnoreCase) ?? false) ||
+
+            //        (x.Status?.Contains(
+            //            search,
+            //            StringComparison.OrdinalIgnoreCase) ?? false) ||
+
+            //        (x.WhatsAppTemplateId.HasValue &&
+            //         ViewBag.TemplateNames is Dictionary<int, string> templateNames &&
+            //         templateNames.TryGetValue(
+            //             x.WhatsAppTemplateId.Value,
+            //             out var templateName) &&
+            //         templateName.Contains(
+            //             search,
+            //             StringComparison.OrdinalIgnoreCase))
+            //    );
+            //}
+
+
+
+
             if (!string.IsNullOrWhiteSpace(search))
             {
+                var term = search.Trim();
+
                 query = query.Where(x =>
-                    x.Id.ToString().Contains(
-                        search, StringComparison.OrdinalIgnoreCase) ||
-                    (x.PhoneNumber?.Contains(
-                        search, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (x.CandidateName?.Contains(
-                        search, StringComparison.OrdinalIgnoreCase) ?? false));
+                    x.Id.ToString().Contains(term, StringComparison.OrdinalIgnoreCase) ||
+
+                    (x.PhoneNumber?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+
+                    (x.CandidateName?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+
+                    (x.Status?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+
+                    (x.WhatsAppTemplateId.HasValue &&
+                     ViewBag.TemplateNames is Dictionary<int, string> templateNames &&
+                     templateNames.TryGetValue(x.WhatsAppTemplateId.Value, out var templateName) &&
+                     templateName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+
+                     DateMatches(x.CreatedAt, term) ||
+                    DateMatches(x.SentAt, term) ||
+                    DateMatches(x.DeliveredAt, term) ||
+                    DateMatches(x.ReadAt, term) ||
+                    DateMatches(x.UpdatedAt, term)
+                );
             }
+        
 
             if (!string.IsNullOrWhiteSpace(status) && status != "All")
             {
@@ -268,6 +331,46 @@ public class DashboardController : Controller
 
 
 
+    //[HttpGet]
+    //public async Task<IActionResult> WhatsAppChat(
+    //    string? phoneNumber,
+    //    CancellationToken cancellationToken = default)
+    //{
+    //    if (string.IsNullOrWhiteSpace(phoneNumber))
+    //    {
+    //        return BadRequest("Phone number is required.");
+    //    }
+
+    //    ViewBag.PhoneNumber = phoneNumber;
+
+    //    try
+    //    {
+    //        var messages = await _api.GetMessagesByPhoneAsync(
+    //            phoneNumber,
+    //            cancellationToken);
+
+    //        var templates = await _api.GetTemplatesAsync(
+    //            cancellationToken);
+
+    //        ViewBag.TemplateDetails = templates;
+
+    //        var orderedMessages = messages
+    //            .OrderBy(m => m.CreatedAt ?? m.SentAt)
+    //            .ToList();
+
+    //        return View(orderedMessages);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        ViewBag.Error = ex.Message;
+    //        ViewBag.TemplateDetails = new List<object>();
+
+    //        return View(new List<WhatsAppMessage>());
+    //    }
+    //}
+
+
+
     [HttpGet]
     public async Task<IActionResult> WhatsAppChat(
         string? phoneNumber,
@@ -279,12 +382,23 @@ public class DashboardController : Controller
         }
 
         ViewBag.PhoneNumber = phoneNumber;
+        ViewBag.CandidateName = "Candidate Name";
 
         try
         {
             var messages = await _api.GetMessagesByPhoneAsync(
                 phoneNumber,
                 cancellationToken);
+
+            var candidateName = messages
+                .Select(m => m.CandidateName)
+                .FirstOrDefault(name =>
+                    !string.IsNullOrWhiteSpace(name));
+
+            if (!string.IsNullOrWhiteSpace(candidateName))
+            {
+                ViewBag.CandidateName = candidateName.Trim();
+            }
 
             var templates = await _api.GetTemplatesAsync(
                 cancellationToken);
@@ -306,8 +420,105 @@ public class DashboardController : Controller
         }
     }
 
+    private static bool DateMatches(DateTime? value, string searchTerm)
+    {
+        if (!value.HasValue || string.IsNullOrWhiteSpace(searchTerm))
+            return false;
 
+        var date = value.Value;
+        var term = searchTerm.Trim();
 
+        var cultures = new[]
+        {
+        CultureInfo.InvariantCulture,
+        CultureInfo.GetCultureInfo("en-IN"),
+        CultureInfo.GetCultureInfo("en-US")
+    };
 
+        var dateTimeFormats = new[]
+        {
+        "dd MMM yyyy, hh:mm tt",
+        "dd MMM yyyy hh:mm tt",
+        "d MMM yyyy, hh:mm tt",
+        "d MMM yyyy hh:mm tt",
+        "dd MMM yyyy, h:mm tt",
+        "dd MMM yyyy h:mm tt",
+        "d MMM yyyy, h:mm tt",
+        "d MMM yyyy h:mm tt",
+        "dd MMM yyyy, HH:mm",
+        "dd MMM yyyy HH:mm",
+        "d MMM yyyy, HH:mm",
+        "d MMM yyyy HH:mm",
+        "dd-MM-yyyy HH:mm",
+        "dd/MM/yyyy HH:mm",
+        "dd MM yyyy HH:mm",
+        "dd-MM-yyyy, hh:mm tt",
+        "dd/MM/yyyy, hh:mm tt",
+        "dd MM yyyy, hh:mm tt",
+        "yyyy-MM-dd HH:mm",
+        "yyyy-MM-ddTHH:mm:ss"
+    };
+
+        foreach (var culture in cultures)
+        {
+            if (DateTime.TryParseExact(
+                term,
+                dateTimeFormats,
+                culture,
+                DateTimeStyles.AllowWhiteSpaces,
+                out var parsedDateTime))
+            {
+                return date.Date == parsedDateTime.Date
+                    && date.Hour == parsedDateTime.Hour
+                    && date.Minute == parsedDateTime.Minute;
+            }
+        }
+
+        var dateOnlyFormats = new[]
+        {
+        "dd-MM-yyyy",
+        "dd/MM/yyyy",
+        "dd MM yyyy",
+        "d-M-yyyy",
+        "d/M/yyyy",
+        "d M yyyy",
+        "dd MMM yyyy",
+        "d MMM yyyy",
+        "dd MMMM yyyy",
+        "d MMMM yyyy",
+        "yyyy-MM-dd",
+        "MM-dd-yyyy",
+        "MM/dd/yyyy"
+    };
+
+        foreach (var culture in cultures)
+        {
+            if (DateTime.TryParseExact(
+                term,
+                dateOnlyFormats,
+                culture,
+                DateTimeStyles.AllowWhiteSpaces,
+                out var parsedDate))
+            {
+                return date.Date == parsedDate.Date;
+            }
+        }
+
+        var searchableValues = new[]
+        {
+        date.ToString("dd MMM yyyy, hh:mm tt", CultureInfo.InvariantCulture),
+        date.ToString("dd MMM yyyy hh:mm tt", CultureInfo.InvariantCulture),
+        date.ToString("dd MMM yyyy, HH:mm", CultureInfo.InvariantCulture),
+        date.ToString("dd-MM-yyyy HH:mm", CultureInfo.InvariantCulture),
+        date.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture),
+        date.ToString("dd MM yyyy", CultureInfo.InvariantCulture),
+        date.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture),
+        date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+        date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+    };
+
+        return searchableValues.Any(x =>
+            x.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
 
 }
