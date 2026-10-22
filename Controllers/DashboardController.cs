@@ -4,6 +4,8 @@ using WhatsAppManagerMvc.Models;
 using WhatsAppManagerMvc.Services;
 using System.Text.Json;
 using System.Globalization;
+using System.Net.Http.Headers;
+
 
 
 namespace WhatsAppManagerMvc.Controllers;
@@ -32,6 +34,8 @@ public class DashboardController : Controller
         {
             model.Error = ex.Message;
         }
+
+
 
         model.Notice = TempData["Notice"] as string;
         model.Error ??= TempData["Error"] as string;
@@ -373,48 +377,44 @@ public class DashboardController : Controller
 
     [HttpGet]
     public async Task<IActionResult> WhatsAppChat(
-        string? phoneNumber,
-        CancellationToken cancellationToken = default)
+      string phoneNumber,
+      string? notice = null,
+      string? error = null,
+      CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(phoneNumber))
         {
-            return BadRequest("Phone number is required.");
+            return RedirectToAction(nameof(MessageHistory));
         }
 
-        ViewBag.PhoneNumber = phoneNumber;
-        ViewBag.CandidateName = "Candidate Name";
+        var recipient = phoneNumber.Trim();
+
+        ViewBag.PhoneNumber = recipient;
+        ViewBag.CandidateName = recipient;
+        ViewBag.Notice = notice;
+        ViewBag.Error = error;
 
         try
         {
-            var messages = await _api.GetMessagesByPhoneAsync(
-                phoneNumber,
+            var messages = await _api.GetChatMessagesAsync(
+                recipient,
                 cancellationToken);
 
-            var candidateName = messages
-                .Select(m => m.CandidateName)
-                .FirstOrDefault(name =>
-                    !string.IsNullOrWhiteSpace(name));
+            var latest = messages
+                .OrderByDescending(m =>
+                    m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
+                .FirstOrDefault();
 
-            if (!string.IsNullOrWhiteSpace(candidateName))
+            if (!string.IsNullOrWhiteSpace(latest?.CandidateName))
             {
-                ViewBag.CandidateName = candidateName.Trim();
+                ViewBag.CandidateName = latest.CandidateName;
             }
 
-            var templates = await _api.GetTemplatesAsync(
-                cancellationToken);
-
-            ViewBag.TemplateDetails = templates;
-
-            var orderedMessages = messages
-                .OrderBy(m => m.CreatedAt ?? m.SentAt)
-                .ToList();
-
-            return View(orderedMessages);
+            return View(messages);
         }
         catch (Exception ex)
         {
             ViewBag.Error = ex.Message;
-            ViewBag.TemplateDetails = new List<object>();
 
             return View(new List<WhatsAppMessage>());
         }
@@ -520,5 +520,102 @@ public class DashboardController : Controller
         return searchableValues.Any(x =>
             x.Contains(term, StringComparison.OrdinalIgnoreCase));
     }
+
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(10485760)]
+    public async Task<IActionResult> SendReply(
+        [FromForm] string? phoneNumber,
+        [FromForm] string? messageType,
+        [FromForm] string? text,
+        [FromForm] string? caption,
+        [FromForm] IFormFile? file,
+        CancellationToken cancellationToken = default)
+    {
+        var recipient = phoneNumber?.Trim();
+
+        if (string.IsNullOrWhiteSpace(recipient))
+        {
+            return RedirectToAction(
+                nameof(MessageHistory));
+        }
+
+        if (string.IsNullOrWhiteSpace(text) &&
+            string.IsNullOrWhiteSpace(caption) &&
+            (file == null || file.Length == 0))
+        {
+            return RedirectToAction(
+                nameof(WhatsAppChat),
+                new { phoneNumber = recipient });
+        }
+
+        try
+        {
+            await _api.SendReplyAsync(
+                recipient,
+                string.IsNullOrWhiteSpace(messageType)
+                    ? "text"
+                    : messageType,
+                text,
+                caption,
+                file,
+                cancellationToken);
+
+            return RedirectToAction(
+                nameof(WhatsAppChat),
+                new { phoneNumber = recipient });
+        }
+        catch (Exception ex)
+        {
+            return RedirectToAction(
+                nameof(WhatsAppChat),
+                new
+                {
+                    phoneNumber = recipient,
+                    error = ex.Message
+                });
+        }
+    }
+
+
+
+
+    //   [HttpGet]
+    //public async Task<IActionResult> WhatsAppChat(
+    //    string phoneNumber,
+    //    CancellationToken cancellationToken = default)
+    //{
+    //    if (string.IsNullOrWhiteSpace(phoneNumber))
+    //        return RedirectToAction(nameof(MessageHistory));
+
+    //    phoneNumber = phoneNumber.Trim();
+
+    //    ViewBag.PhoneNumber = phoneNumber;
+    //    ViewBag.CandidateName = phoneNumber;
+
+    //    try
+    //    {
+    //        var messages = await _api.GetChatMessagesAsync(
+    //            phoneNumber,
+    //            cancellationToken);
+
+    //        var latest = messages
+    //            .OrderByDescending(m =>
+    //                m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
+    //            .FirstOrDefault();
+
+    //        if (!string.IsNullOrWhiteSpace(latest?.CandidateName))
+    //            ViewBag.CandidateName = latest.CandidateName;
+
+    //        return View(messages);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        ViewBag.Error = ex.Message;
+    //        return View(new List<WhatsAppMessage>());
+    //    }
+    //}
+
 
 }

@@ -1,6 +1,14 @@
 ﻿
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using WhatsAppManagerMvc.Models;
 
 namespace WhatsAppManagerMvc.Services;
@@ -8,6 +16,7 @@ namespace WhatsAppManagerMvc.Services;
 public class WhatsAppApiService
 {
     private readonly HttpClient _httpClient;
+
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -22,7 +31,8 @@ public class WhatsAppApiService
         CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.GetAsync(
-            "api/WhatsAppTemplates", cancellationToken);
+            "api/WhatsAppTemplates",
+            cancellationToken);
 
         response.EnsureSuccessStatusCode();
 
@@ -36,16 +46,14 @@ public class WhatsAppApiService
 
         foreach (var item in array.EnumerateArray())
         {
-            var template = new WhatsAppTemplate
+            templates.Add(new WhatsAppTemplate
             {
                 Id = GetInt(item, "id"),
                 TemplateName = GetString(item, "templateName") ?? "",
                 LanguageCode = GetString(item, "languageCode"),
                 Category = GetString(item, "category"),
                 IsActive = GetBool(item, "isActive", true)
-            };
-
-            templates.Add(template);
+            });
         }
 
         return templates;
@@ -55,7 +63,8 @@ public class WhatsAppApiService
         CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.GetAsync(
-            "api/WhatsApp/messages", cancellationToken);
+            "api/WhatsApp/messages",
+            cancellationToken);
 
         response.EnsureSuccessStatusCode();
 
@@ -63,16 +72,18 @@ public class WhatsAppApiService
             cancellationToken);
 
         using var document = JsonDocument.Parse(json);
-        var array = GetArray(document.RootElement);
 
-        return ParseMessages(array);
+        return ParseMessages(GetArray(document.RootElement));
     }
 
     public async Task<List<WhatsAppMessage>> GetMessagesByPhoneAsync(
         string phoneNumber,
         CancellationToken cancellationToken = default)
     {
-        var encodedPhone = Uri.EscapeDataString(phoneNumber);
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new ArgumentException("Phone number is required.");
+
+        var encodedPhone = Uri.EscapeDataString(phoneNumber.Trim());
 
         using var response = await _httpClient.GetAsync(
             $"api/WhatsApp/messages/{encodedPhone}",
@@ -108,7 +119,6 @@ public class WhatsAppApiService
         return new List<WhatsAppMessage>();
     }
 
-
     public async Task<string> SendBulkAsync(
         int templateId,
         IFormFile recipientFile,
@@ -116,9 +126,7 @@ public class WhatsAppApiService
         CancellationToken cancellationToken = default)
     {
         if (recipientFile == null || recipientFile.Length == 0)
-        {
             throw new ArgumentException("Recipient file is empty.");
-        }
 
         using var form = new MultipartFormDataContent();
 
@@ -133,17 +141,15 @@ public class WhatsAppApiService
                 memoryStream.ToArray());
 
             fileContent.Headers.ContentType =
-                new System.Net.Http.Headers.MediaTypeHeaderValue(
-                    "application/octet-stream");
+                new MediaTypeHeaderValue("application/octet-stream");
 
             form.Add(fileContent, "File", recipientFile.FileName);
         }
 
-
         if (headerImage is { Length: > 0 })
         {
-            var extension =
-                Path.GetExtension(headerImage.FileName).ToLowerInvariant();
+            var extension = Path.GetExtension(
+                headerImage.FileName).ToLowerInvariant();
 
             var contentType = extension switch
             {
@@ -164,14 +170,13 @@ public class WhatsAppApiService
                 imageMemoryStream.ToArray());
 
             imageContent.Headers.ContentType =
-                new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+                new MediaTypeHeaderValue(contentType);
 
             form.Add(
                 imageContent,
                 "HeaderImage",
                 headerImage.FileName);
         }
-
 
         var requestUrl =
             $"api/WhatsApp/send-bulk?WhatsAppTemplateId={templateId}";
@@ -195,6 +200,105 @@ public class WhatsAppApiService
             : responseBody;
     }
 
+    public async Task<string> SendReplyAsync(
+        string phoneNumber,
+        string messageType,
+        string? text,
+        string? caption,
+        IFormFile? file,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new ArgumentException("Phone number is required.");
+
+        using var form = new MultipartFormDataContent();
+
+        form.Add(
+            new StringContent(phoneNumber.Trim()),
+            "PhoneNumber");
+
+        form.Add(
+            new StringContent(
+                string.IsNullOrWhiteSpace(messageType)
+                    ? "text"
+                    : messageType.Trim()),
+            "MessageType");
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            form.Add(new StringContent(text), "Text");
+        }
+
+        if (!string.IsNullOrWhiteSpace(caption))
+        {
+            form.Add(new StringContent(caption), "Caption");
+        }
+
+        if (file is { Length: > 0 })
+        {
+            var stream = file.OpenReadStream();
+            var content = new StreamContent(stream);
+
+            content.Headers.ContentType =
+                new MediaTypeHeaderValue(
+                    string.IsNullOrWhiteSpace(file.ContentType)
+                        ? "application/octet-stream"
+                        : file.ContentType);
+
+            form.Add(
+                content,
+                "File",
+                Path.GetFileName(file.FileName));
+        }
+
+        using var response = await _httpClient.PostAsync(
+            "api/WhatsApp/reply",
+            form,
+            cancellationToken);
+
+        var responseBody = await response.Content.ReadAsStringAsync(
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"WhatsApp API error {(int)response.StatusCode}: {responseBody}");
+        }
+
+        return responseBody;
+    }
+
+    public async Task<List<WhatsAppMessage>> GetChatMessagesAsync(
+        string phoneNumber,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new ArgumentException("Phone number is required.");
+
+        var encodedPhone = Uri.EscapeDataString(phoneNumber.Trim());
+
+        using var response = await _httpClient.GetAsync(
+            $"api/WhatsApp/chat/{encodedPhone}",
+            cancellationToken);
+
+        var json = await response.Content.ReadAsStringAsync(
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"Chat API returned {(int)response.StatusCode}: {json}");
+        }
+
+        using var document = JsonDocument.Parse(json);
+
+        var messages = ParseMessages(
+            GetArray(document.RootElement));
+
+        return messages
+            .OrderBy(m => m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
+            .ToList();
+    }
 
     private static List<WhatsAppMessage> ParseMessages(
         JsonElement array)
@@ -207,7 +311,9 @@ public class WhatsAppApiService
         foreach (var item in array.EnumerateArray())
         {
             if (item.ValueKind == JsonValueKind.Object)
+            {
                 messages.Add(ParseMessage(item));
+            }
         }
 
         return messages;
@@ -220,18 +326,29 @@ public class WhatsAppApiService
             Id = GetInt(item, "id"),
             PhoneNumber = GetString(item, "phoneNumber") ?? "",
             CandidateName = GetString(item, "candidateName"),
+
+            Direction = GetString(item, "direction"),
+            MessageType = GetString(item, "messageType"),
+            MessageText = GetString(item, "messageText"),
+            MediaUrl = GetString(item, "mediaUrl"),
+            MediaId = GetString(item, "mediaId"),
+            FileName = GetString(item, "fileName"),
+
             WhatsAppTemplateId =
                 GetNullableInt(item, "whatsAppTemplateId")
                 ?? GetNullableInt(item, "WhatsAppTemplateId"),
+
             Status = GetString(item, "status"),
             MetaMessageId = GetString(item, "metaMessageId"),
             ErrorMessage = GetString(item, "errorMessage"),
+
             CreatedAt = GetDate(item, "createdAt"),
             SentAt = GetDate(item, "sentAt"),
             DeliveredAt = GetDate(item, "deliveredAt"),
             ReadAt = GetDate(item, "readAt"),
             FailedAt = GetDate(item, "failedAt"),
             UpdatedAt = GetDate(item, "updatedAt"),
+
             ReplyMessage = GetString(item, "replyMessage"),
             ReplyReceivedAt = GetDate(item, "replyReceivedAt")
         };
@@ -286,11 +403,15 @@ public class WhatsAppApiService
     }
 
     private static string? GetString(
-        JsonElement element, string name)
+        JsonElement element,
+        string name)
     {
         if (!TryGet(element, name, out var value) ||
-            value.ValueKind == JsonValueKind.Null)
+            value.ValueKind == JsonValueKind.Null ||
+            value.ValueKind == JsonValueKind.Undefined)
+        {
             return null;
+        }
 
         return value.ValueKind == JsonValueKind.String
             ? value.GetString()
@@ -303,7 +424,8 @@ public class WhatsAppApiService
     }
 
     private static int? GetNullableInt(
-        JsonElement element, string name)
+        JsonElement element,
+        string name)
     {
         return TryGet(element, name, out var value) &&
                int.TryParse(value.ToString(), out var number)
@@ -312,7 +434,9 @@ public class WhatsAppApiService
     }
 
     private static bool GetBool(
-        JsonElement element, string name, bool defaultValue)
+        JsonElement element,
+        string name,
+        bool defaultValue)
     {
         return TryGet(element, name, out var value) &&
                bool.TryParse(value.ToString(), out var result)
@@ -321,7 +445,8 @@ public class WhatsAppApiService
     }
 
     private static DateTime? GetDate(
-        JsonElement element, string name)
+        JsonElement element,
+        string name)
     {
         return TryGet(element, name, out var value) &&
                DateTime.TryParse(value.ToString(), out var date)

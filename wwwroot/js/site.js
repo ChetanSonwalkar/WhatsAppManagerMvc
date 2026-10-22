@@ -608,4 +608,174 @@ document.addEventListener("DOMContentLoaded", function () {
 
         waBody.scrollTop = waBody.scrollHeight;
     }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // const form = document.getElementById("waTextForm");
+        const form = document.getElementById("waTextForm");
+
+        if (!form) return;
+
+        const messageInput = document.getElementById("waTextMessage");
+        const messageTypeInput = document.getElementById("waMessageType");
+        const attachmentToggle = document.getElementById("waAttachmentToggle");
+        const attachmentMenu = document.getElementById("waAttachmentMenu");
+        const statusElement = document.getElementById("waShareStatus");
+        const sendButton = document.getElementById("waSendTextButton");
+        const selectedFile = document.getElementById("waSelectedFile");
+        const selectedFileName = document.getElementById("waSelectedFileName");
+        const removeFileButton = document.getElementById("waRemoveFile");
+
+        const fileInputs = {
+            image: document.getElementById("waImageFile"),
+            document: document.getElementById("waDocumentFile"),
+            video: document.getElementById("waVideoFile"),
+            audio: document.getElementById("waAudioFile")
+        };
+
+        let activeFileInput = null;
+
+        function showStatus(message, isError) {
+            if (!statusElement) return;
+
+            statusElement.textContent = message;
+            statusElement.style.color = isError ? "#c0392b" : "#087f5b";
+        }
+
+        function resetAttachment() {
+            Object.values(fileInputs).forEach(function (input) {
+                if (input) input.value = "";
+            });
+
+            activeFileInput = null;
+
+            if (selectedFile) selectedFile.hidden = true;
+            if (selectedFileName) selectedFileName.textContent = "";
+            if (messageTypeInput) messageTypeInput.value = "text";
+        }
+
+        if (attachmentToggle && attachmentMenu) {
+            attachmentToggle.addEventListener("click", function () {
+                attachmentMenu.hidden = !attachmentMenu.hidden;
+            });
+        }
+
+        document.querySelectorAll("[data-share-type]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                const type = button.dataset.shareType;
+                const input = fileInputs[type];
+
+                if (!input) return;
+
+                if (attachmentMenu) attachmentMenu.hidden = true;
+                input.click();
+            });
+        });
+
+        Object.entries(fileInputs).forEach(function ([type, input]) {
+            if (!input) return;
+
+            input.addEventListener("change", function () {
+                if (!input.files || !input.files.length) return;
+
+                activeFileInput = input;
+                messageTypeInput.value = type;
+
+                if (selectedFile) selectedFile.hidden = false;
+                if (selectedFileName) {
+                    selectedFileName.textContent = input.files[0].name;
+                }
+
+                if (type === "image" || type === "video") {
+                    document.getElementById("waCaption").hidden = false;
+                }
+            });
+        });
+
+        if (removeFileButton) {
+            removeFileButton.addEventListener("click", resetAttachment);
+        }
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const text = messageInput.value.trim();
+            const file = activeFileInput &&
+                activeFileInput.files &&
+                activeFileInput.files.length
+                ? activeFileInput.files[0]
+                : null;
+
+            if (!text && !file) {
+                showStatus("Enter a message or choose a file.", true);
+                return;
+            }
+
+            const formData = new FormData(form);
+
+            if (file && activeFileInput) {
+                formData.set("file", file, file.name);
+            } else {
+                formData.delete("file");
+            }
+
+            sendButton.disabled = true;
+            showStatus("Sending message...", false);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                });
+
+                const result = await response.json().catch(function () {
+                    return null;
+                });
+
+                if (!response.ok || !result || result.success !== true) {
+                    throw new Error(
+                        result && result.message
+                            ? result.message
+                            : "Unable to send the message."
+                    );
+                }
+
+                messageInput.value = "";
+                document.getElementById("waCaption").value = "";
+                document.getElementById("waCaption").hidden = true;
+                resetAttachment();
+
+                showStatus("Message request submitted.", false);
+
+                window.setTimeout(function () {
+                    window.location.reload();
+                }, 800);
+            } catch (error) {
+                showStatus(
+                    error.message || "Unable to send the message.",
+                    true
+                );
+            } finally {
+                sendButton.disabled = false;
+            }
+        });
+
+        const refreshButton = document.getElementById("waRefresh");
+
+        if (refreshButton) {
+            refreshButton.addEventListener("click", function () {
+                window.location.reload();
+            });
+        }
+
+        window.setInterval(function () {
+            if (!document.hidden) {
+                window.location.reload();
+            }
+        }, 15000);
+    });
+
+
 });

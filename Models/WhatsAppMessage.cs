@@ -17,5 +17,18 @@
         public DateTime? UpdatedAt { get; set; }
         public string? ReplyMessage { get; set; }
         public DateTime? ReplyReceivedAt { get; set; }
+
+
+
+        public int RetryCount { get; set; }
+
+
+        public string? Direction { get; set; }
+        public string? MessageType { get; set; }
+        public string? MessageText { get; set; }
+        public string? MediaUrl { get; set; }
+        public string? MediaId { get; set; }
+        public string? FileName { get; set; }
+
     }
 }
