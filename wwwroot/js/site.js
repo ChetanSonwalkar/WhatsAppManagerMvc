@@ -777,5 +777,137 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 15000);
     });
 
+    (() => {
+        const form = document.getElementById("waForm");
+        const plus = document.getElementById("waPlus");
+        const options = document.getElementById("waOptions");
+        const file = document.getElementById("waFile");
+        const text = document.getElementById("waText");
+        const type = document.getElementById("waMessageType");
+        const caption = document.getElementById("waCaption");
+        const send = document.getElementById("waSend");
+        const fileInfo = document.getElementById("waFileInfo");
+        const fileName = document.getElementById("waFileName");
+        const search = document.getElementById("waSearch");
+        const messages = document.getElementById("waMessages");
+        const count = document.getElementById("waCount");
+
+        plus.addEventListener("click", event => {
+            event.stopPropagation();
+            options.classList.toggle("open");
+        });
+
+        options.querySelectorAll("[data-kind]").forEach(button => {
+            button.addEventListener("click", () => {
+                const kind = button.dataset.kind;
+
+                type.value = kind;
+
+                file.accept = kind === "image" ? "image/*"
+                    : kind === "video" ? "video/*"
+                        : kind === "audio" ? "audio/*"
+                            : ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip";
+
+                options.classList.remove("open");
+                file.click();
+            });
+        });
+
+        document.addEventListener("click", event => {
+            if (!options.contains(event.target) &&
+                !plus.contains(event.target)) {
+                options.classList.remove("open");
+            }
+        });
+
+        file.addEventListener("change", () => {
+            const selected = file.files && file.files[0];
+
+            fileInfo.hidden = !selected;
+            fileName.textContent = selected
+                ? "Selected: " + selected.name
+                : "";
+
+            if (!selected) {
+                type.value = "text";
+            }
+        });
+
+        document.getElementById("waClearFile").addEventListener("click", () => {
+            file.value = "";
+            type.value = "text";
+            caption.value = "";
+            fileInfo.hidden = true;
+            fileName.textContent = "";
+        });
+
+        form.addEventListener("submit", event => {
+            const message = text.value.trim();
+            const hasFile = file.files && file.files.length > 0;
+
+            if (!message && !hasFile) {
+                event.preventDefault();
+                text.focus();
+                return;
+            }
+
+            if (hasFile && message) {
+                caption.value = message;
+            } else if (!hasFile) {
+                type.value = "text";
+                caption.value = "";
+            }
+
+            send.disabled = true;
+            send.textContent = "…";
+        });
+
+        text.addEventListener("keydown", event => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        search.addEventListener("input", () => {
+            const query = search.value.trim().toLowerCase();
+            const rows = [...messages.querySelectorAll(".wa-row")];
+            let visible = 0;
+
+            rows.forEach(row => {
+                const match = (
+                    row.innerText + " " + (row.dataset.search || "")
+                ).toLowerCase().includes(query);
+
+                row.style.display = match ? "flex" : "none";
+
+                if (match) {
+                    visible++;
+                }
+            });
+
+            count.textContent = visible + " messages";
+        });
+
+        document.getElementById("waRefresh").addEventListener("click", () => {
+            window.location.reload();
+        });
+
+        messages.addEventListener("click", event => {
+            const button = event.target.closest(".wa-read-more");
+            if (!button) return;
+
+            const targetId = button.dataset.target;
+            const content = document.getElementById(targetId);
+            if (!content) return;
+
+            const expanded = button.getAttribute("aria-expanded") === "true";
+            content.classList.toggle("collapsed", expanded);
+            button.setAttribute("aria-expanded", String(!expanded));
+            button.textContent = expanded ? "Read more" : "Read less";
+        });
+
+        messages.scrollTop = messages.scrollHeight;
+    })();
 
 });

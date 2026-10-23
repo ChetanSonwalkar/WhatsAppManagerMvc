@@ -14,370 +14,26 @@
         candidateName = phoneNumber;
     }
 
-    var messages = Model ?? new List<WhatsAppManagerMvc.Models.WhatsAppMessage>();
-
-    var orderedMessages = messages
+    var messages = (Model ?? new List<WhatsAppManagerMvc.Models.WhatsAppMessage>())
         .OrderBy(m => m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
         .ToList();
+
+    var templateImages =
+        ViewBag.TemplateImageUrls as Dictionary<int, string>
+        ?? new Dictionary<int, string>();
+
+    var whatsappTemplates =
+        ViewBag.WhatsAppTemplates as IEnumerable<WhatsAppManagerMvc.Models.WhatsAppTemplate>
+        ?? Enumerable.Empty<WhatsAppManagerMvc.Models.WhatsAppTemplate>();
 }
 
-<style>
-    .wa-chat {
-        max-width: 1200px;
-        margin: 20px auto;
-        background: #fff;
-        border: 1px solid #dce3e9;
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 5px 22px #0000000d;
-    }
-
-    .wa-header {
-        background: #075e54;
-        color: white;
-        padding: 14px 18px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .wa-contact {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-width: 0;
-    }
-
-    .wa-avatar {
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        flex-shrink: 0;
-        background: #d9fdd3;
-        color: #075e54;
-        font-weight: 800;
-    }
-
-    .wa-name {
-        font-weight: 700;
-        font-size: 16px;
-        overflow-wrap: anywhere;
-    }
-
-    .wa-phone {
-        font-size: 12px;
-        opacity: .85;
-        margin-top: 3px;
-    }
-
-    .wa-header-actions {
-        display: flex;
-        gap: 7px;
-    }
-
-        .wa-header-actions a,
-        .wa-header-actions button {
-            color: white;
-            background: transparent;
-            border: 1px solid #8bb5af;
-            border-radius: 8px;
-            padding: 7px 11px;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-    .wa-search {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px;
-        border-bottom: 1px solid #e0e5ea;
-    }
-
-        .wa-search input {
-            flex: 1;
-            min-width: 0;
-            padding: 10px 12px;
-            border: 1px solid #d5dfe7;
-            border-radius: 8px;
-        }
-
-    .wa-count {
-        font-size: 12px;
-        color: #667781;
-        white-space: nowrap;
-    }
-
-    .wa-messages {
-        height: 500px;
-        overflow-y: auto;
-        padding: 16px;
-        background: #efe8df;
-    }
-
-    .wa-row {
-        display: flex;
-        width: 100%;
-        margin: 10px 0;
-    }
-
-        .wa-row.incoming {
-            justify-content: flex-start;
-        }
-
-        .wa-row.outgoing {
-            justify-content: flex-end;
-        }
-
-    .wa-bubble {
-        max-width: 78%;
-        min-width: 110px;
-        padding: 10px 12px;
-        border-radius: 12px;
-        overflow-wrap: anywhere;
-        box-shadow: 0 1px 2px #0000000d;
-    }
-
-    .incoming .wa-bubble {
-        background: white;
-        border-top-left-radius: 3px;
-    }
-
-    .outgoing .wa-bubble {
-        background: #d9fdd3;
-        border-top-right-radius: 3px;
-    }
-
-    .wa-sender {
-        font-size: 12px;
-        color: #008577;
-        font-weight: 700;
-        margin-bottom: 6px;
-    }
-
-    .wa-text {
-        white-space: pre-wrap;
-        font-size: 14px;
-    }
-
-    .wa-meta {
-        text-align: right;
-        font-size: 10px;
-        color: #667781;
-        margin-top: 7px;
-    }
-
-    .wa-ticks {
-        color: #667781;
-        font-weight: 800;
-        margin-left: 4px;
-    }
-
-        .wa-ticks.read {
-            color: #16a34a;
-        }
-
-    .wa-image-link {
-        display: block;
-        margin-top: 6px;
-    }
-
-    .wa-media {
-        display: block;
-        width: auto;
-        max-width: min(320px, 100%);
-        max-height: 350px;
-        object-fit: contain;
-        border-radius: 9px;
-        background: #f3f4f6;
-    }
-
-    .wa-video {
-        width: 100%;
-        max-width: 320px;
-        max-height: 350px;
-        margin-top: 6px;
-        border-radius: 9px;
-    }
-
-    .wa-attachment {
-        margin-top: 8px;
-        overflow-wrap: anywhere;
-    }
-
-        .wa-attachment a {
-            color: #075e54;
-            font-weight: 600;
-        }
-
-    .wa-empty {
-        padding: 35px;
-        text-align: center;
-        color: #667781;
-    }
-
-    .wa-alert {
-        margin: 10px;
-        padding: 10px 12px;
-        border-radius: 8px;
-        overflow-wrap: anywhere;
-    }
-
-    .wa-error {
-        background: #fff0f0;
-        color: #a12626;
-    }
-
-    .wa-success {
-        background: #e6f6ed;
-        color: #17653d;
-    }
-
-    .wa-composer {
-        position: relative;
-        padding: 12px;
-        background: #f7f9fb;
-        border-top: 1px solid #dce3e9;
-    }
-
-    .wa-composer-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .wa-plus-wrap {
-        position: relative;
-        flex-shrink: 0;
-    }
-
-    .wa-plus,
-    .wa-send {
-        width: 44px;
-        height: 44px;
-        border: none;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        font-size: 24px;
-    }
-
-    .wa-plus {
-        background: #dff4ed;
-        color: #087e70;
-    }
-
-    .wa-send {
-        background: #087e70;
-        color: white;
-    }
-
-        .wa-send:disabled {
-            opacity: .6;
-            cursor: wait;
-        }
-
-    .wa-input {
-        flex: 1;
-        min-width: 0;
-        height: 46px;
-        border: 1px solid #d5dfe7;
-        border-radius: 25px;
-        padding: 0 16px;
-        background: white;
-        outline: none;
-    }
-
-        .wa-input:focus {
-            border-color: #087e70;
-        }
-
-    .wa-options {
-        position: absolute;
-        bottom: 54px;
-        left: 0;
-        z-index: 1000;
-        width: 220px;
-        padding: 8px;
-        display: none;
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 8px 28px #00000026;
-    }
-
-        .wa-options.open {
-            display: block;
-        }
-
-    .wa-option {
-        display: block;
-        width: 100%;
-        padding: 12px 10px;
-        border: 0;
-        background: white;
-        color: #202c33;
-        border-radius: 8px;
-        cursor: pointer;
-        text-align: left;
-    }
-
-        .wa-option:hover {
-            background: #f0f5f3;
-        }
-
-    .wa-file-info {
-        padding: 7px 55px 0;
-        font-size: 12px;
-        color: #667781;
-        overflow-wrap: anywhere;
-    }
-
-        .wa-file-info button {
-            border: 0;
-            color: #b42318;
-            background: transparent;
-            cursor: pointer;
-        }
-
-    .wa-hidden {
-        display: none !important;
-    }
-
-    @@media(max-width: 600px) {
-        .wa-chat {
-            margin: 0;
-            border-radius: 0;
-        }
-
-        .wa-header {
-            padding: 12px;
-        }
-
-        .wa-messages {
-            height: calc(100vh - 245px);
-            min-height: 300px;
-            padding: 10px;
-        }
-
-        .wa-bubble {
-            max-width: 90%;
-        }
-
-        .wa-header-actions a,
-        .wa-header-actions button {
-            padding: 6px 8px;
-        }
-    }
-</style>
 
 <div class="wa-chat">
+
     <div class="wa-header">
         <div class="wa-contact">
             <div class="wa-avatar">WA</div>
+
             <div>
                 <div class="wa-name">@candidateName</div>
                 <div class="wa-phone">@phoneNumber</div>
@@ -401,17 +57,23 @@
     }
 
     <div class="wa-search">
-        <input id="waSearch" type="search" placeholder="Search messages..." />
-        <span id="waCount" class="wa-count">@orderedMessages.Count messages</span>
+        <input id="waSearch"
+               type="search"
+               placeholder="Search messages..." />
+
+        <span id="waCount" class="wa-count">
+            @messages.Count messages
+        </span>
     </div>
 
     <div class="wa-messages" id="waMessages">
-        @if (orderedMessages.Count == 0)
+
+        @if (messages.Count == 0)
         {
             <div class="wa-empty">No messages found.</div>
         }
 
-        @foreach (var message in orderedMessages)
+        @foreach (var message in messages)
         {
             var direction = (message.Direction ?? "").Trim();
 
@@ -424,9 +86,108 @@
             var status = (message.Status ?? "").Trim().ToLowerInvariant();
             var bodyText = message.MessageText ?? "";
             var mediaUrl = message.MediaUrl;
+
             var messageDate = message.CreatedAt ?? message.SentAt;
 
-            var isImage = type == "image" ||
+            var templateId = message.WhatsAppTemplateId;
+            dynamic? selectedTemplate = null;
+            string? templateImageUrl = null;
+
+            var imageTemplateCandidates = new List<dynamic>();
+            foreach (var templateItem in whatsappTemplates)
+            {
+                dynamic candidate = templateItem;
+                int candidateId = 0;
+                string? headerFormat = null;
+                try { candidateId = Convert.ToInt32(candidate.Id); } catch { }
+                try { headerFormat = Convert.ToString(candidate.HeaderFormat); } catch { }
+
+                if (string.Equals(headerFormat, "IMAGE", StringComparison.OrdinalIgnoreCase))
+                {
+                    imageTemplateCandidates.Add(candidate);
+                }
+
+                if (templateId.HasValue && candidateId == templateId.Value)
+                {
+                    selectedTemplate = candidate;
+                    break;
+                }
+
+                if (!templateId.HasValue &&
+                    string.Equals(headerFormat, "IMAGE", StringComparison.OrdinalIgnoreCase))
+                {
+                    string? candidateBody = null;
+                    try { candidateBody = Convert.ToString(candidate.BodyText); } catch { }
+
+                    static string NormalizeTemplateText(string? value)
+                    {
+                        if (string.IsNullOrWhiteSpace(value))
+                            return string.Empty;
+
+                        return string.Join(
+                            " ",
+                            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                            .Trim();
+                    }
+
+                    var normalizedMessage = NormalizeTemplateText(bodyText);
+                    var normalizedCandidate = NormalizeTemplateText(candidateBody);
+
+                    if (!string.IsNullOrWhiteSpace(normalizedMessage) &&
+                        !string.IsNullOrWhiteSpace(normalizedCandidate) &&
+                        (string.Equals(
+                            normalizedMessage,
+                            normalizedCandidate,
+                            StringComparison.OrdinalIgnoreCase) ||
+                         normalizedMessage.Contains(normalizedCandidate, StringComparison.OrdinalIgnoreCase) ||
+                         normalizedCandidate.Contains(normalizedMessage, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        selectedTemplate = candidate;
+                        break;
+                    }
+                }
+            }
+
+          
+            if (selectedTemplate == null && !templateId.HasValue && imageTemplateCandidates.Count == 1)
+            {
+                selectedTemplate = imageTemplateCandidates[0];
+            }
+
+            if (selectedTemplate != null)
+            {
+                try { templateImageUrl = Convert.ToString(selectedTemplate.HeaderImageUrl); } catch { }
+            }
+
+            if (string.IsNullOrWhiteSpace(templateImageUrl) && templateId.HasValue)
+            {
+                templateImages.TryGetValue(templateId.Value, out templateImageUrl);
+            }
+
+            var isImageTemplate =
+                type.Contains("imagetemplate", StringComparison.OrdinalIgnoreCase);
+
+           
+            if (isImageTemplate &&
+                string.IsNullOrWhiteSpace(mediaUrl) &&
+                !string.IsNullOrWhiteSpace(templateImageUrl))
+            {
+                mediaUrl = templateImageUrl;
+            }
+
+            
+
+            string? templateName = null;
+            string? templateBodyText = null;
+            if (selectedTemplate != null)
+            {
+                try { templateName = Convert.ToString(selectedTemplate.TemplateName); } catch { }
+                try { templateBodyText = Convert.ToString(selectedTemplate.BodyText); } catch { }
+            }
+
+            var isImage =
+                type.Contains("image", StringComparison.OrdinalIgnoreCase) ||
+                isImageTemplate ||
                 (!string.IsNullOrWhiteSpace(mediaUrl) &&
                  (mediaUrl.Split('?')[0].EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
                   mediaUrl.Split('?')[0].EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
@@ -435,66 +196,126 @@
 
             var isImagePlaceholder =
                 bodyText.Contains("[image message received]", StringComparison.OrdinalIgnoreCase) ||
-                bodyText.Contains("[image message sent]", StringComparison.OrdinalIgnoreCase);
+                bodyText.Contains("[image message sent]", StringComparison.OrdinalIgnoreCase) ||
+                isImageTemplate;
+
+            var isVideo = type.Contains("video");
+            var isAudio = type.Contains("audio") || type.Contains("voice");
+            var isDocument = type.Contains("document") || type.Contains("file");
 
             <div class="wa-row @(outgoing ? "outgoing" : "incoming")"
                  data-search="@($"{bodyText} {message.FileName} {type} {status}".ToLowerInvariant())">
-                <div class="wa-bubble">
-                    <div class="wa-sender">@(outgoing ? "You" : candidateName)</div>
 
-                    @if (!string.IsNullOrWhiteSpace(mediaUrl) && isImage)
+                <div class="wa-bubble @(isImageTemplate ? "wa-image-template-bubble" : "")">
+
+                    <div class="wa-sender">
+                        @(outgoing ? "You" : candidateName)
+                    </div>
+
+                    @if (isImageTemplate)
+                    {
+                        <div class="wa-template-name">
+                            @(string.IsNullOrWhiteSpace(templateName) ? "WhatsApp Image Template" : templateName)
+                        </div>
+                    }
+
+                    @if (isImage && !string.IsNullOrWhiteSpace(mediaUrl))
                     {
                         <a class="wa-image-link"
                            href="@mediaUrl"
                            target="_blank"
                            rel="noopener noreferrer">
+
                             <img class="wa-media"
                                  src="@mediaUrl"
-                                 alt="WhatsApp image"
+                                 alt="WhatsApp template image"
                                  loading="lazy"
-                                 onerror="this.style.display='none'; this.parentElement.nextElementSibling.hidden=false;" />
+                                 onerror="this.style.display='none';this.parentElement.nextElementSibling.hidden=false;" />
                         </a>
 
                         <div class="wa-attachment" hidden>
                             Image preview unavailable.
-                            <a href="@mediaUrl" target="_blank" rel="noopener noreferrer">Open image</a>
+                            <a href="@mediaUrl"
+                               target="_blank"
+                               rel="noopener noreferrer">Open image</a>
                         </div>
                     }
-                    else if (!string.IsNullOrWhiteSpace(mediaUrl) && type == "video")
+                    else if (!string.IsNullOrWhiteSpace(mediaUrl) && isVideo)
                     {
                         <video class="wa-video" controls preload="metadata">
                             <source src="@mediaUrl" />
                             Your browser does not support video playback.
                         </video>
                     }
-                    else if (!string.IsNullOrWhiteSpace(mediaUrl) &&
-                             (type == "audio" || type == "voice"))
+                    else if (!string.IsNullOrWhiteSpace(mediaUrl) && isAudio)
                     {
-                        <audio controls preload="metadata" style="max-width:260px">
+                        <audio class="wa-audio" controls preload="metadata">
                             <source src="@mediaUrl" />
                         </audio>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(mediaUrl) && isDocument)
+                    {
+                        <div class="wa-attachment">
+                            <a href="@mediaUrl"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                📎 @(string.IsNullOrWhiteSpace(message.FileName)
+                                                                                                                                                                                                    ? "Open attachment"
+                                                                                                                                                                                                    : message.FileName)
+                            </a>
+                        </div>
                     }
                     else if (!string.IsNullOrWhiteSpace(mediaUrl))
                     {
                         <div class="wa-attachment">
-                            <a href="@mediaUrl" target="_blank" rel="noopener noreferrer">
+                            <a href="@mediaUrl"
+                               target="_blank"
+                               rel="noopener noreferrer">
                                 📎 @(string.IsNullOrWhiteSpace(message.FileName)
-                                                                    ? "Open attachment"
-                                                                    : message.FileName)
+                                                                                                                                                                                                    ? "Open attachment"
+                                                                                                                                                                                                    : message.FileName)
                             </a>
                         </div>
                     }
 
-                    @if (!string.IsNullOrWhiteSpace(bodyText) &&
-                         !(isImagePlaceholder && !string.IsNullOrWhiteSpace(mediaUrl)))
+                    @{
+                        var displayBodyText = bodyText;
+
+                        if (string.IsNullOrWhiteSpace(displayBodyText) ||
+                            displayBodyText.Equals("[image message received]", StringComparison.OrdinalIgnoreCase) ||
+                            displayBodyText.Equals("[image message sent]", StringComparison.OrdinalIgnoreCase))
+                        {
+                            displayBodyText = templateBodyText ?? string.Empty;
+                        }
+
+                        var needsReadMore = displayBodyText.Length > 180;
+                        var textElementId = "waBody_" + message.Id;
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(displayBodyText))
                     {
-                        <div class="wa-text">@bodyText</div>
+                        <div class="wa-text">
+                            <div id="@textElementId"
+                                 class="wa-text-content @(needsReadMore ? "collapsed" : "")">
+                                @displayBodyText
+                            </div>
+
+                            @if (needsReadMore)
+                            {
+                                <button type="button"
+                                        class="wa-read-more"
+                                        data-target="@textElementId"
+                                        aria-expanded="false">
+                                    Read more
+                                </button>
+                            }
+                        </div>
                     }
 
                     @if (isImagePlaceholder && string.IsNullOrWhiteSpace(mediaUrl))
                     {
                         <div class="wa-text">
-                            Image received, but no image URL was returned by the API.
+                            Image template detected, but no accessible image URL was returned.
                         </div>
                     }
 
@@ -515,6 +336,7 @@
                     {
                         <div class="wa-meta">Status: @status</div>
                     }
+
                 </div>
             </div>
         }
@@ -532,18 +354,47 @@
         <input type="hidden" name="messageType" id="waMessageType" value="text" />
         <input type="hidden" name="caption" id="waCaption" value="" />
 
-        <input class="wa-hidden" type="file" id="waFile" name="file" />
+        <input class="wa-hidden"
+               type="file"
+               id="waFile"
+               name="file" />
 
         <div class="wa-composer">
+
             <div class="wa-composer-row">
+
                 <div class="wa-plus-wrap">
-                    <button type="button" class="wa-plus" id="waPlus">+</button>
+                    <button type="button"
+                            class="wa-plus"
+                            id="waPlus">
+                        +
+                    </button>
 
                     <div class="wa-options" id="waOptions">
-                        <button type="button" class="wa-option" data-kind="image">▧ Photos</button>
-                        <button type="button" class="wa-option" data-kind="document">▤ Documents</button>
-                        <button type="button" class="wa-option" data-kind="video">▷ Videos</button>
-                        <button type="button" class="wa-option" data-kind="audio">♫ Audio</button>
+
+                        <button type="button"
+                                class="wa-option"
+                                data-kind="image">
+                            ▧ Photos
+                        </button>
+
+                        <button type="button"
+                                class="wa-option"
+                                data-kind="document">
+                            ▤ Documents
+                        </button>
+
+                        <button type="button"
+                                class="wa-option"
+                                data-kind="video">
+                            ▷ Videos
+                        </button>
+
+                        <button type="button"
+                                class="wa-option"
+                                data-kind="audio">
+                            ♫ Audio
+                        </button>
                     </div>
                 </div>
 
@@ -554,129 +405,22 @@
                        placeholder="Type a message..."
                        autocomplete="off" />
 
-                <button type="submit" id="waSend" class="wa-send" title="Send">➤</button>
+                <button type="submit"
+                        id="waSend"
+                        class="wa-send"
+                        title="Send">
+                    ➤
+                </button>
+
             </div>
 
             <div class="wa-file-info" id="waFileInfo" hidden>
                 <span id="waFileName"></span>
                 <button type="button" id="waClearFile">Remove</button>
             </div>
+
         </div>
     </form>
 </div>
 
-<script>
-    (() => {
-        const form = document.getElementById("waForm");
-        const plus = document.getElementById("waPlus");
-        const options = document.getElementById("waOptions");
-        const file = document.getElementById("waFile");
-        const text = document.getElementById("waText");
-        const type = document.getElementById("waMessageType");
-        const caption = document.getElementById("waCaption");
-        const send = document.getElementById("waSend");
-        const fileInfo = document.getElementById("waFileInfo");
-        const fileName = document.getElementById("waFileName");
-        const search = document.getElementById("waSearch");
-        const messages = document.getElementById("waMessages");
-        const count = document.getElementById("waCount");
 
-        plus.addEventListener("click", event => {
-            event.stopPropagation();
-            options.classList.toggle("open");
-        });
-
-        options.querySelectorAll("[data-kind]").forEach(button => {
-            button.addEventListener("click", () => {
-                const kind = button.dataset.kind;
-                type.value = kind;
-
-                file.accept = kind === "image" ? "image/*"
-                    : kind === "video" ? "video/*"
-                        : kind === "audio" ? "audio/*"
-                            : ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip";
-
-                options.classList.remove("open");
-                file.click();
-            });
-        });
-
-        document.addEventListener("click", event => {
-            if (!options.contains(event.target) && !plus.contains(event.target)) {
-                options.classList.remove("open");
-            }
-        });
-
-        file.addEventListener("change", () => {
-            const selected = file.files && file.files[0];
-
-            fileInfo.hidden = !selected;
-            fileName.textContent = selected ? "Selected: " + selected.name : "";
-
-            if (!selected) {
-                type.value = "text";
-            }
-        });
-
-        document.getElementById("waClearFile").addEventListener("click", () => {
-            file.value = "";
-            type.value = "text";
-            caption.value = "";
-            fileInfo.hidden = true;
-            fileName.textContent = "";
-        });
-
-        form.addEventListener("submit", event => {
-            const message = text.value.trim();
-            const hasFile = file.files && file.files.length > 0;
-
-            if (!message && !hasFile) {
-                event.preventDefault();
-                text.focus();
-                return;
-            }
-
-            if (hasFile && message) {
-                caption.value = message;
-            } else if (!hasFile) {
-                type.value = "text";
-                caption.value = "";
-            }
-
-            send.disabled = true;
-            send.textContent = "…";
-        });
-
-        text.addEventListener("keydown", event => {
-            if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                form.requestSubmit();
-            }
-        });
-
-        search.addEventListener("input", () => {
-            const query = search.value.trim().toLowerCase();
-            const rows = [...messages.querySelectorAll(".wa-row")];
-            let visible = 0;
-
-            rows.forEach(row => {
-                const match = (row.innerText + " " + (row.dataset.search || ""))
-                    .toLowerCase().includes(query);
-
-                row.style.display = match ? "flex" : "none";
-
-                if (match) {
-                    visible++;
-                }
-            });
-
-            count.textContent = visible + " messages";
-        });
-
-        document.getElementById("waRefresh").addEventListener("click", () => {
-            window.location.reload();
-        });
-
-        messages.scrollTop = messages.scrollHeight;
-    })();
-</script>

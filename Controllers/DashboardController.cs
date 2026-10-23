@@ -48,7 +48,7 @@ public class DashboardController : Controller
     {
         page = Math.Max(1, page);
 
-        if (pageSize is not (10 or 25 or 50 or 100) )
+        if (pageSize is not (10 or 25 or 50 or 100))
             pageSize = 10;
 
         var model = new DashboardViewModel
@@ -147,7 +147,7 @@ public class DashboardController : Controller
                     DateMatches(x.UpdatedAt, term)
                 );
             }
-        
+
 
             if (!string.IsNullOrWhiteSpace(status) && status != "All")
             {
@@ -187,14 +187,14 @@ public class DashboardController : Controller
         return View(model);
     }
 
-        [HttpPost]
+    [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(52428800)]
     public async Task<IActionResult> SendBulk(
-        int templateId,
-        IFormFile? recipientFile,
-        IFormFile? headerImage,
-        CancellationToken cancellationToken)
+    int templateId,
+    IFormFile? recipientFile,
+    IFormFile? headerImage,
+    CancellationToken cancellationToken)
     {
         if (templateId <= 0)
         {
@@ -378,13 +378,15 @@ public class DashboardController : Controller
 
     [HttpGet]
     public async Task<IActionResult> WhatsAppChat(
-        string phoneNumber,
-        string? notice = null,
-        string? error = null,
-        CancellationToken cancellationToken = default)
+     string phoneNumber,
+     string? notice = null,
+     string? error = null,
+     CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
             return RedirectToAction(nameof(MessageHistory));
+        }
 
         var recipient = phoneNumber.Trim();
 
@@ -393,55 +395,108 @@ public class DashboardController : Controller
         ViewBag.Notice = notice;
         ViewBag.Error = error;
 
+        ViewBag.TemplateImageUrls = new Dictionary<int, string>();
+
         try
         {
+            // Load chat messages for the selected phone number.
             var chatMessages = await _api.GetChatMessagesAsync(
                 recipient,
                 cancellationToken);
 
-            // First try to get the name from the chat API response.
+            // Find candidate name from chat messages.
             var candidateName = chatMessages
                 .Select(m => m.CandidateName)
-                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+                .FirstOrDefault(name =>
+                    !string.IsNullOrWhiteSpace(name));
 
-            // If chat API has no name, try the messages API.
+            // If candidate name is unavailable, search all messages.
             if (string.IsNullOrWhiteSpace(candidateName))
             {
-                var allMessages = await _api.GetMessagesAsync(
-                    cancellationToken);
+                try
+                {
+                    var allMessages = await _api.GetMessagesAsync(
+                        cancellationToken);
 
-                candidateName = allMessages
-                    .Where(m =>
-                        string.Equals(
-                            NormalizePhone(m.PhoneNumber),
-                            NormalizePhone(recipient),
-                            StringComparison.OrdinalIgnoreCase))
-                    .Select(m => m.CandidateName)
-                    .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+                    var normalizedPhone = NormalizePhone(recipient);
+
+                    candidateName = allMessages
+                        .Where(m =>
+                            NormalizePhone(m.PhoneNumber) == normalizedPhone)
+                        .Select(m => m.CandidateName)
+                        .FirstOrDefault(name =>
+                            !string.IsNullOrWhiteSpace(name));
+                }
+                catch
+                {
+                    // Keep the phone number as the displayed name.
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(candidateName))
+            {
                 ViewBag.CandidateName = candidateName;
+            }
 
+            // Load template header images.
+            try
+            {
+                var templates = await _api.GetTemplatesAsync(
+                    cancellationToken);
+
+                ViewBag.WhatsAppTemplates = templates;
+
+                var templateImageUrls = templates
+                    .Where(t =>
+                        t.Id > 0 &&
+                        string.Equals(
+                            t.HeaderFormat,
+                            "IMAGE",
+                            StringComparison.OrdinalIgnoreCase) &&
+                        !string.IsNullOrWhiteSpace(t.HeaderImageUrl))
+                    .GroupBy(t => t.Id)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => group.First().HeaderImageUrl!);
+
+                ViewBag.TemplateImageUrls = templateImageUrls;
+            }
+            catch
+            {
+                // Chat messages should still display if templates fail to load.
+                ViewBag.TemplateImageUrls = new Dictionary<int, string>();
+            }
+
+            // Sort messages in chronological order.
             var orderedMessages = chatMessages
-                .OrderBy(m => m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
+                .OrderBy(m =>
+                    m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
                 .ToList();
 
             return View(orderedMessages);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             ViewBag.Error = ex.Message;
-            return View(new List<WhatsAppMessage>());
+
+            return View(
+                new List<WhatsAppMessage>());
         }
     }
 
     private static string NormalizePhone(string? phone)
     {
-        return new string((phone ?? "")
-            .Where(char.IsDigit)
-            .ToArray());
+        return new string(
+            (phone ?? string.Empty)
+                .Where(char.IsDigit)
+                .ToArray());
     }
+
+
 
 
     private static bool DateMatches(DateTime? value, string searchTerm)

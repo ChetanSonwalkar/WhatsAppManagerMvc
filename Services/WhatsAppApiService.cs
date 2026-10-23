@@ -52,7 +52,11 @@ public class WhatsAppApiService
                 TemplateName = GetString(item, "templateName") ?? "",
                 LanguageCode = GetString(item, "languageCode"),
                 Category = GetString(item, "category"),
-                IsActive = GetBool(item, "isActive", true)
+                IsActive = GetBool(item, "isActive", true),
+                HeaderFormat = GetString(item, "headerFormat"),
+                HeaderImageUrl = GetString(item, "headerImageUrl"),
+                BodyText = GetString(item, "bodyText")
+
             });
         }
 

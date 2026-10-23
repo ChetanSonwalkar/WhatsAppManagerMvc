@@ -2279,3 +2279,469 @@ button, input, select {
         font-size: 13px;
         overflow-wrap: anywhere;
     }
+
+
+.wa-chat {
+    max-width: 1200px;
+    margin: 6px auto;
+    background: #fff;
+    border: 1px solid #dce3e9;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 22px #0000000d;
+}
+
+.wa-header {
+    background: #075e54;
+    color: white;
+    padding: 7px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.wa-contact {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.wa-avatar {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #d9fdd3;
+    color: #075e54;
+    font-weight: 800;
+}
+
+.wa-name {
+    font-size: 13px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.wa-phone {
+    font-size: 11px;
+    margin-top: 1px;
+    opacity: .9;
+}
+
+.wa-header-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+    .wa-header-actions a,
+    .wa-header-actions button {
+        color: white;
+        background: transparent;
+        border: 1px solid #8bb5af;
+        border-radius: 7px;
+        padding: 4px 8px;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+.wa-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-bottom: 1px solid #e0e5ea;
+}
+
+    .wa-search input {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 9px;
+        border: 1px solid #d5dfe7;
+        border-radius: 8px;
+        outline: none;
+    }
+
+.wa-count {
+    font-size: 11px;
+    color: #667781;
+    white-space: nowrap;
+}
+
+.wa-messages {
+    height: 390px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px;
+    background: #efe8df;
+}
+
+.wa-row {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    margin: 1px 0;
+    padding: 0;
+    line-height: normal;
+}
+
+    .wa-row.incoming {
+        justify-content: flex-start;
+    }
+
+    .wa-row.outgoing {
+        justify-content: flex-end;
+    }
+
+.wa-bubble {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    align-self: flex-start !important;
+    width: fit-content !important;
+    max-width: min(65%, 460px);
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: fit-content !important;
+    padding: 4px 6px;
+    margin: 0;
+    gap: 0 !important;
+    border-radius: 10px;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
+    box-shadow: 0 1px 2px #0000000d;
+}
+
+    .wa-bubble > * {
+        flex: 0 0 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        margin-bottom: 0;
+    }
+
+    .wa-bubble .wa-text {
+        width: fit-content;
+        max-width: 100%;
+        align-self: flex-start;
+        text-align: left;
+        margin-top: 2px;
+    }
+
+    .wa-bubble .wa-meta {
+        width: max-content;
+        max-width: 100%;
+        align-self: flex-end;
+        margin-top: 2px;
+        line-height: 1.1;
+    }
+
+    .wa-bubble .wa-sender {
+        line-height: 1.1;
+        margin: 0 0 2px;
+    }
+
+.wa-image-template-bubble {
+    width: fit-content !important;
+    max-width: min(230px, 85%);
+}
+
+    .wa-image-template-bubble .wa-text {
+        width: 100%;
+        max-width: 190px;
+        align-self: flex-start;
+    }
+
+    .wa-image-template-bubble .wa-meta {
+        width: max-content;
+        max-width: 100%;
+        align-self: flex-end;
+    }
+
+.incoming .wa-bubble {
+    background: white;
+    border-top-left-radius: 3px;
+}
+
+.outgoing .wa-bubble {
+    background: #d9fdd3;
+    border-top-right-radius: 3px;
+}
+
+.wa-sender {
+    display: block;
+    font-size: 10px;
+    color: #008577;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0 0 2px;
+}
+
+.wa-text {
+    display: block;
+    white-space: pre-wrap;
+    font-size: 11px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    margin-top: 2px;
+    padding: 0;
+}
+
+.wa-text-content.collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.wa-read-more {
+    display: inline-block;
+    margin-top: 3px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #087e70;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.wa-template-name {
+    color: #075e54;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 0 0 3px;
+    overflow-wrap: anywhere;
+}
+
+.wa-image-link {
+    display: block;
+    margin: 3px 0;
+}
+
+.wa-media {
+    display: block;
+    max-width: min(180px, 100%);
+    max-height: 180px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 7px;
+    background: #f3f4f6;
+}
+
+.wa-image-template-bubble .wa-image-link {
+    width: fit-content;
+    max-width: 100%;
+}
+
+.wa-video {
+    width: 100%;
+    max-width: 320px;
+    max-height: 350px;
+    margin-top: 5px;
+    border-radius: 8px;
+}
+
+.wa-audio {
+    max-width: 260px;
+    width: 100%;
+}
+
+.wa-attachment {
+    margin: 7px 0;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+    .wa-attachment a {
+        color: #075e54;
+        font-weight: 600;
+    }
+
+.wa-meta {
+    text-align: right;
+    font-size: 9px;
+    color: #667781;
+    margin-top: 2px;
+    padding: 0;
+}
+
+.wa-ticks {
+    margin-left: 4px;
+    font-weight: 800;
+}
+
+    .wa-ticks.read {
+        color: #16a34a;
+    }
+
+.wa-empty {
+    padding: 35px;
+    text-align: center;
+    color: #667781;
+}
+
+.wa-alert {
+    margin: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.wa-error {
+    background: #fff0f0;
+    color: #a12626;
+}
+
+.wa-success {
+    background: #e6f6ed;
+    color: #17653d;
+}
+
+.wa-composer {
+    position: relative;
+    padding: 6px 8px;
+    background: #f7f9fb;
+    border-top: 1px solid #dce3e9;
+}
+
+.wa-composer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wa-plus-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.wa-plus,
+.wa-send {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 22px;
+}
+
+.wa-plus {
+    background: #dff4ed;
+    color: #087e70;
+}
+
+.wa-send {
+    background: #087e70;
+    color: white;
+}
+
+    .wa-send:disabled {
+        opacity: .6;
+        cursor: wait;
+    }
+
+.wa-input {
+    flex: 1;
+    min-width: 0;
+    height: 34px;
+    border: 1px solid #d5dfe7;
+    border-radius: 24px;
+    padding: 0 11px;
+    background: white;
+    outline: none;
+}
+
+    .wa-input:focus {
+        border-color: #087e70;
+    }
+
+.wa-options {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    z-index: 1000;
+    width: 210px;
+    padding: 4px;
+    display: none;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px #00000026;
+}
+
+    .wa-options.open {
+        display: block;
+    }
+
+.wa-option {
+    display: block;
+    width: 100%;
+    padding: 7px;
+    border: 0;
+    background: white;
+    color: #202c33;
+    border-radius: 7px;
+    cursor: pointer;
+    text-align: left;
+}
+
+    .wa-option:hover {
+        background: #f0f5f3;
+    }
+
+.wa-file-info {
+    padding: 7px 50px 0;
+    font-size: 12px;
+    color: #667781;
+    overflow-wrap: anywhere;
+}
+
+    .wa-file-info button {
+        border: 0;
+        color: #b42318;
+        background: transparent;
+        cursor: pointer;
+    }
+
+.wa-hidden {
+    display: none !important;
+}
+
+@@media(max-width: 600px) {
+    .wa-chat {
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .wa-header {
+        padding: 7px;
+    }
+
+    .wa-messages {
+        height: calc(100vh - 190px);
+        min-height: 220px;
+        padding: 8px;
+    }
+
+    .wa-bubble {
+        max-width: 82%;
+    }
+
+    .wa-image-template-bubble {
+        max-width: min(240px, 88%);
+    }
+
+    .wa-header-actions a,
+    .wa-header-actions button {
+        padding: 5px 7px;
+    }
+}
