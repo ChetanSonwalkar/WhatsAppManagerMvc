@@ -375,17 +375,16 @@ public class DashboardController : Controller
 
 
 
+
     [HttpGet]
     public async Task<IActionResult> WhatsAppChat(
-      string phoneNumber,
-      string? notice = null,
-      string? error = null,
-      CancellationToken cancellationToken = default)
+        string phoneNumber,
+        string? notice = null,
+        string? error = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(phoneNumber))
-        {
             return RedirectToAction(nameof(MessageHistory));
-        }
 
         var recipient = phoneNumber.Trim();
 
@@ -396,29 +395,54 @@ public class DashboardController : Controller
 
         try
         {
-            var messages = await _api.GetChatMessagesAsync(
+            var chatMessages = await _api.GetChatMessagesAsync(
                 recipient,
                 cancellationToken);
 
-            var latest = messages
-                .OrderByDescending(m =>
-                    m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
-                .FirstOrDefault();
+            // First try to get the name from the chat API response.
+            var candidateName = chatMessages
+                .Select(m => m.CandidateName)
+                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
 
-            if (!string.IsNullOrWhiteSpace(latest?.CandidateName))
+            // If chat API has no name, try the messages API.
+            if (string.IsNullOrWhiteSpace(candidateName))
             {
-                ViewBag.CandidateName = latest.CandidateName;
+                var allMessages = await _api.GetMessagesAsync(
+                    cancellationToken);
+
+                candidateName = allMessages
+                    .Where(m =>
+                        string.Equals(
+                            NormalizePhone(m.PhoneNumber),
+                            NormalizePhone(recipient),
+                            StringComparison.OrdinalIgnoreCase))
+                    .Select(m => m.CandidateName)
+                    .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
             }
 
-            return View(messages);
+            if (!string.IsNullOrWhiteSpace(candidateName))
+                ViewBag.CandidateName = candidateName;
+
+            var orderedMessages = chatMessages
+                .OrderBy(m => m.CreatedAt ?? m.SentAt ?? DateTime.MinValue)
+                .ToList();
+
+            return View(orderedMessages);
         }
         catch (Exception ex)
         {
             ViewBag.Error = ex.Message;
-
             return View(new List<WhatsAppMessage>());
         }
     }
+
+    private static string NormalizePhone(string? phone)
+    {
+        return new string((phone ?? "")
+            .Where(char.IsDigit)
+            .ToArray());
+    }
+
 
     private static bool DateMatches(DateTime? value, string searchTerm)
     {
