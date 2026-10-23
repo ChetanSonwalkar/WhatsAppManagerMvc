@@ -75,6 +75,37 @@ public class DashboardController : Controller
             var messages = await _api.GetMessagesAsync(
                 cancellationToken);
 
+            // If the history page is filtered by a phone number, also query
+            // the phone-specific endpoint in case the all-messages endpoint
+            // has not included the newest conversation records.
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var phoneDigits = NormalizePhone(search);
+
+                if (phoneDigits.Length >= 10 &&
+                    phoneDigits.All(char.IsDigit))
+                {
+                    try
+                    {
+                        var phoneMessages = await _api.GetMessagesByPhoneAsync(
+                            search.Trim(),
+                            cancellationToken);
+
+                        messages = messages
+                            .Concat(phoneMessages)
+                            .GroupBy(m => m.Id > 0
+                                ? $"id:{m.Id}"
+                                : $"{NormalizePhone(m.PhoneNumber)}|{m.Direction}|{m.CreatedAt:O}|{m.SentAt:O}|{m.MessageText}|{m.MediaUrl}")
+                            .Select(g => g.First())
+                            .ToList();
+                    }
+                    catch
+                    {
+                        // Keep the all-messages result if the phone endpoint fails.
+                    }
+                }
+            }
+
             var query = messages.AsEnumerable();
 
             //if (!string.IsNullOrWhiteSpace(search))
@@ -613,51 +644,46 @@ public class DashboardController : Controller
         CancellationToken cancellationToken = default)
     {
         var recipient = phoneNumber?.Trim();
+        var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
         if (string.IsNullOrWhiteSpace(recipient))
         {
-            return RedirectToAction(
-                nameof(MessageHistory));
+            if (isAjax)
+                return BadRequest(new { success = false, message = "Phone number is required." });
+            return RedirectToAction(nameof(MessageHistory));
         }
 
-        if (string.IsNullOrWhiteSpace(text) &&
-            string.IsNullOrWhiteSpace(caption) &&
-            (file == null || file.Length == 0))
+        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(caption) && (file == null || file.Length == 0))
         {
-            return RedirectToAction(
-                nameof(WhatsAppChat),
-                new { phoneNumber = recipient });
+            if (isAjax)
+                return BadRequest(new { success = false, message = "Enter a message or select a file." });
+            return RedirectToAction(nameof(WhatsAppChat), new { phoneNumber = recipient });
         }
 
         try
         {
             await _api.SendReplyAsync(
                 recipient,
-                string.IsNullOrWhiteSpace(messageType)
-                    ? "text"
-                    : messageType,
+                string.IsNullOrWhiteSpace(messageType) ? "text" : messageType,
                 text,
                 caption,
                 file,
                 cancellationToken);
 
-            return RedirectToAction(
-                nameof(WhatsAppChat),
-                new { phoneNumber = recipient });
+            if (isAjax)
+                return Ok(new { success = true, phoneNumber = recipient, message = "Message sent." });
+
+            TempData["Notice"] = "Message sent successfully.";
+            return RedirectToAction(nameof(WhatsAppChat), new { phoneNumber = recipient });
         }
         catch (Exception ex)
         {
-            return RedirectToAction(
-                nameof(WhatsAppChat),
-                new
-                {
-                    phoneNumber = recipient,
-                    error = ex.Message
-                });
+            if (isAjax)
+                return BadRequest(new { success = false, message = ex.Message });
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(WhatsAppChat), new { phoneNumber = recipient });
         }
     }
-
-
 
 
     //   [HttpGet]
@@ -696,5 +722,56 @@ public class DashboardController : Controller
     //    }
     //}
 
+
+    [HttpGet]
+    public async Task<IActionResult> WhatsAppMedia(
+        string mediaId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(mediaId))
+            return BadRequest("Media ID is required.");
+
+        var mediaUrl =
+            $"https://whatsapp.ciitstudent.com/api/WhatsApp/media/{Uri.EscapeDataString(mediaId)}";
+
+        try
+        {
+            using var client = new HttpClient();
+
+            using var response = await client.GetAsync(
+                mediaUrl,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return StatusCode(
+                    (int)response.StatusCode,
+                    "Unable to load WhatsApp media.");
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType
+                              ?? "application/octet-stream";
+
+            var imageBytes = await response.Content.ReadAsByteArrayAsync(
+                cancellationToken);
+
+            if (imageBytes.Length == 0)
+                return NotFound("Media content is empty.");
+
+            return File(imageBytes, contentType);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return StatusCode(
+                StatusCodes.Status502BadGateway,
+                "Error while retrieving WhatsApp media.");
+        }
+    }
 
 }

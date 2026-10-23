@@ -11,7 +11,11 @@
 <body>
     <header class="topbar">
         <a class="brand" asp-controller="Dashboard" asp-action="Index">
-            <span class="brand-icon">WA</span>
+            @* <span class="brand-icon">WA</span> *@
+            <div class="hero-mark">
+                <img src="~/images/logo.png"
+                     alt="CIIT Institute Logo" class="hero-mark"/>
+            </div>
             <span>CIIT WhatsApp Manager </span>
         </a>
         <span class="topbar-subtitle">Bulk Messaging Dashboard</span>

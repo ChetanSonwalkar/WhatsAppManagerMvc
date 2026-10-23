@@ -87,6 +87,15 @@
             var bodyText = message.MessageText ?? "";
             var mediaUrl = message.MediaUrl;
 
+            // The chat API may return MediaId instead of a direct media URL.
+            // Use the WhatsApp media endpoint to render incoming and outgoing images.
+            if (string.IsNullOrWhiteSpace(mediaUrl) &&
+                !string.IsNullOrWhiteSpace(message.MediaId))
+            {
+                mediaUrl = "https://whatsapp.ciitstudent.com/api/WhatsApp/media/" +
+                           Uri.EscapeDataString(message.MediaId.Trim());
+            }
+
             var messageDate = message.CreatedAt ?? message.SentAt;
 
             var templateId = message.WhatsAppTemplateId;
@@ -228,7 +237,7 @@
 
                             <img class="wa-media"
                                  src="@mediaUrl"
-                                 alt="WhatsApp template image"
+                                 alt="WhatsApp image"
                                  loading="lazy"
                                  onerror="this.style.display='none';this.parentElement.nextElementSibling.hidden=false;" />
                         </a>
@@ -260,8 +269,8 @@
                                target="_blank"
                                rel="noopener noreferrer">
                                 📎 @(string.IsNullOrWhiteSpace(message.FileName)
-                                                                                                                                                                                                    ? "Open attachment"
-                                                                                                                                                                                                    : message.FileName)
+                                                                                                                                                                                                                                    ? "Open attachment"
+                                                                                                                                                                                                                                    : message.FileName)
                             </a>
                         </div>
                     }
@@ -272,8 +281,8 @@
                                target="_blank"
                                rel="noopener noreferrer">
                                 📎 @(string.IsNullOrWhiteSpace(message.FileName)
-                                                                                                                                                                                                    ? "Open attachment"
-                                                                                                                                                                                                    : message.FileName)
+                                                                                                                                                                                                                                    ? "Open attachment"
+                                                                                                                                                                                                                                    : message.FileName)
                             </a>
                         </div>
                     }
@@ -416,7 +425,7 @@
 
             <div class="wa-file-info" id="waFileInfo" hidden>
                 <span id="waFileName"></span>
-                <button type="button" id="waClearFile">Remove</button>
+                <button type="button" id="waClearFile">X</button>
             </div>
 
         </div>
